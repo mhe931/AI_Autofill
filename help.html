@@ -17,28 +17,57 @@
 <body>
     <header>
         <h1>AI Form Filler - Documentation</h1>
-        <p>An intelligent automation suite developed by <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a>.</p>
+        <p>A general-purpose automation suite for intelligent form mapping and dynamic data injection.</p>
+        <p>Developed by <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a>.</p>
     </header>
 
     <div class="feature">
-        <strong>How It Works:</strong> The extension combines your professional profile (Daniel Ebrahimzadeh, 14+ years Data Engineering, M.Sc. at University of Vaasa) with the target form HTML into a single LLM-ready prompt. You paste it into any AI, copy the JSON answer back, and the extension fills the form.
+        <strong>How It Works:</strong> Configure your professional profile once in the <strong>User Profile</strong> section. The extension merges your profile with the target form HTML into a single LLM-ready prompt. You paste it into any AI (Gemini, ChatGPT, Claude, etc.), copy the JSON answer back, and the extension fills the form automatically.
     </div>
+
+    <h2>Getting Started</h2>
+    <ol>
+        <li><strong>Set Up Your Profile:</strong> Open the extension popup and click <strong>"User Profile"</strong> to expand the profile section. Paste your resume, professional bio, or any context you want the LLM to use when filling forms. Click <strong>"Save Profile"</strong>. This is stored locally and persists across sessions.</li>
+        <li><strong>Navigate to a Form:</strong> Go to any web form you want to fill (job application, registration, etc.).</li>
+        <li><strong>Follow the 3-step workflow below.</strong></li>
+    </ol>
 
     <h2>3-Step Workflow</h2>
     <ol>
         <li>
-            <strong>1 &rarr; Extract (Prompt + HTML)</strong><br>
-            Navigate to the target form page. Click <strong>"Extract Form HTML"</strong>. The extension scrapes all form elements, merges them with your applicant profile and historical data, and produces a complete LLM prompt. This prompt appears in the textarea <em>and</em> is copied to your clipboard.
+            <strong>1 &rarr; Extract (Profile + Form HTML)</strong><br>
+            Click <strong>"Extract Form HTML"</strong>. The extension scrapes all form elements, merges them with your saved profile and any historical data from the Local Warehouse, and produces a complete LLM prompt. This prompt appears in the textarea <em>and</em> is copied to your clipboard.
         </li>
         <li>
             <strong>2 &rarr; Paste to AI</strong><br>
-            Open an LLM (Gemini, ChatGPT, Claude, etc.). Click <strong>"Paste to LLM"</strong>. The extension reads directly from its textarea and injects the prompt into the AI chat input. No clipboard dependency at this step.
+            Open an LLM interface. Click <strong>"Paste to LLM"</strong>. The extension reads directly from its textarea and injects the prompt into the AI chat input. No clipboard dependency at this step.
         </li>
         <li>
             <strong>3 &rarr; Paste AI JSON &amp; Execute</strong><br>
             Copy the LLM JSON response. Paste it into the extension textarea (replacing the prompt). Click <strong>"Execute Injection"</strong>. The extension strips any <code>```json</code> markdown fences, validates JSON, then maps keys to form fields using multi-signal matching (id, name, label, placeholder, container text).
         </li>
     </ol>
+
+    <h2>User Profile</h2>
+    <div class="feature">
+        <p>The <strong>User Profile</strong> section in the popup stores your personal context (resume, bio, skills, publications, etc.) in <code>chrome.storage.local</code>. This text is injected verbatim into the <code>### USER PROFILE</code> section of every generated prompt.</p>
+        <ul style="margin:0; padding-left:20px;">
+            <li>Paste any format: plain text, structured sections, or bullet points.</li>
+            <li>The more detail you provide, the better the LLM can fill specialized fields.</li>
+            <li>Profile data never leaves your browser. It is stored locally and included only in prompts you manually send to an LLM.</li>
+            <li>Click <strong>"Clear Profile"</strong> to remove all stored profile data.</li>
+        </ul>
+    </div>
+
+    <h2>Textarea Controls</h2>
+    <div class="feature">
+        <ul style="margin:0; padding-left:20px;">
+            <li><strong>Clear:</strong> Empties the textarea and clears the persisted content.</li>
+            <li><strong>Copy:</strong> Copies the current textarea content to the system clipboard.</li>
+            <li><strong>Paste:</strong> Reads the system clipboard and replaces the textarea content.</li>
+        </ul>
+        <p style="margin-top:8px;"><strong>Background Persistence:</strong> The textarea content is automatically saved to <code>chrome.storage.local</code> on every keystroke. Content is restored when you reopen the popup.</p>
+    </div>
 
     <h2>Data Warehouse &amp; Persistence</h2>
     <p>All data stays local via <code>chrome.storage.local</code>:</p>
@@ -58,14 +87,14 @@
         <li>Set <strong>Clipboard</strong> to <strong>Allow</strong>.</li>
         <li>Reload the page and retry.</li>
     </ol>
-    <p><em>Note:</em> Even if clipboard copy fails, the prompt still loads into the textarea. You can copy it manually.</p>
+    <p><em>Note:</em> Even if clipboard copy fails, the prompt still loads into the textarea. Copy it manually.</p>
 
     <h3>Connection Errors</h3>
     <p>If you see <strong>"Receiving end does not exist"</strong> or <strong>"Reload the target page to reconnect"</strong>:</p>
     <ol>
-        <li>This means the extension listener on the target page has been disconnected (e.g., after a browser update or long idle period).</li>
-        <li><strong>Refresh the target form page</strong> (F5 or Ctrl+R) to restart the extension listener.</li>
-        <li>Try the action again. The extension will also attempt automatic re-injection on the first failure.</li>
+        <li>The extension listener on the target page was disconnected.</li>
+        <li><strong>Refresh the target page</strong> (F5 or Ctrl+R) to restart the listener.</li>
+        <li>Try again. The extension also attempts automatic re-injection on first failure.</li>
     </ol>
 
     <h3>URL Support Limitation</h3>
@@ -74,14 +103,16 @@
     <h2>Best Practices</h2>
     <div class="feature">
         <ul style="margin:0; padding-left:20px;">
+            <li><strong>Configure your profile first.</strong> A detailed profile produces much better LLM responses.</li>
             <li><strong>Active Tab Focus:</strong> Click into the target tab before pressing Extract.</li>
             <li><strong>LLM Input Focus:</strong> Click inside the LLM chat box before pressing Paste.</li>
-            <li><strong>JSON Fences:</strong> The extension auto-strips <code>```json</code> wrappers. If injection still fails, verify JSON structure manually.</li>
-            <li><strong>Capture Often:</strong> Run Capture after each form to build historical context for future prompts.</li>
+            <li><strong>JSON Fences:</strong> The extension auto-strips <code>```json</code> wrappers.</li>
+            <li><strong>Capture Often:</strong> Run Capture after each form to build historical context.</li>
+            <li><strong>Use Clear:</strong> Clear the textarea before pasting new JSON to avoid mixing data.</li>
         </ul>
     </div>
 
-    <h2>About the Developer</h2>
+    <h2>About</h2>
     <p>Lead Developer: <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a><br>
     M.Sc. Computing Sciences (AI &amp; Data Engineering), University of Vaasa</p>
 

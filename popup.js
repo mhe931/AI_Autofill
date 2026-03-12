@@ -14,13 +14,9 @@ function checkClipboardPermission() {
     }).catch(function() {});
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkClipboardPermission();
-});
-
-document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') checkClipboardPermission();
-});
+// === Storage Keys ===
+var STORAGE_KEY_PROMPT = 'promptBoxContent';
+var STORAGE_KEY_PROFILE = 'userProfile';
 
 // === Helpers ===
 function setStatus(msg) {
@@ -47,12 +43,61 @@ function getTextarea() {
     return document.getElementById('jsonInput');
 }
 
-// Helper: try sendMessage, handle disconnection with programmatic re-injection
+function getProfileTextarea() {
+    return document.getElementById('profileInput');
+}
+
+// === Textarea Persistence ===
+function saveTextareaContent() {
+    var textarea = getTextarea();
+    if (!textarea) return;
+    var obj = {};
+    obj[STORAGE_KEY_PROMPT] = textarea.value;
+    chrome.storage.local.set(obj);
+}
+
+function loadTextareaContent() {
+    var textarea = getTextarea();
+    if (!textarea) return;
+    chrome.storage.local.get([STORAGE_KEY_PROMPT], function(result) {
+        if (result[STORAGE_KEY_PROMPT] !== undefined) {
+            textarea.value = result[STORAGE_KEY_PROMPT];
+        }
+    });
+}
+
+// === Profile Persistence ===
+function saveProfile() {
+    var profileTextarea = getProfileTextarea();
+    if (!profileTextarea) return;
+    var obj = {};
+    obj[STORAGE_KEY_PROFILE] = profileTextarea.value;
+    chrome.storage.local.set(obj, function() {
+        setStatus('Profile saved!');
+    });
+}
+
+function loadProfile() {
+    var profileTextarea = getProfileTextarea();
+    if (!profileTextarea) return;
+    chrome.storage.local.get([STORAGE_KEY_PROFILE], function(result) {
+        if (result[STORAGE_KEY_PROFILE] !== undefined) {
+            profileTextarea.value = result[STORAGE_KEY_PROFILE];
+        }
+    });
+}
+
+function getProfileValue(callback) {
+    chrome.storage.local.get([STORAGE_KEY_PROFILE], function(result) {
+        callback(result[STORAGE_KEY_PROFILE] || '');
+    });
+}
+
+// === Safe Message Sender (handles port disconnection) ===
 function safeSendMessage(tabId, message, callback) {
     chrome.tabs.sendMessage(tabId, message, function(response) {
         if (chrome.runtime.lastError) {
             var errMsg = chrome.runtime.lastError.message || '';
-            // Content script not loaded or orphaned - re-inject and retry once
             if (errMsg.includes('Receiving end does not exist') || errMsg.includes('Could not establish connection')) {
                 chrome.scripting.executeScript({
                     target: { tabId: tabId },
@@ -62,7 +107,6 @@ function safeSendMessage(tabId, message, callback) {
                         callback(null, 'Reload the target page to reconnect the extension.');
                         return;
                     }
-                    // Retry after re-injection
                     setTimeout(function() {
                         chrome.tabs.sendMessage(tabId, message, function(retryResponse) {
                             if (chrome.runtime.lastError) {
@@ -71,7 +115,7 @@ function safeSendMessage(tabId, message, callback) {
                                 callback(retryResponse, null);
                             }
                         });
-                    }, 200);
+                    }, 250);
                 });
             } else {
                 callback(null, errMsg);
@@ -82,8 +126,103 @@ function safeSendMessage(tabId, message, callback) {
     });
 }
 
+// === Init ===
+document.addEventListener('DOMContentLoaded', function() {
+    loadTextareaContent();
+    loadProfile();
+    checkClipboardPermission();
+
+    // Auto-save textarea on every keystroke
+    var textarea = getTextarea();
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            saveTextareaContent();
+        });
+    }
+});
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        checkClipboardPermission();
+        loadTextareaContent();
+        loadProfile();
+    }
+});
+
+// ========================================================
+// PROFILE TOGGLE
+// ========================================================
+document.getElementById('profileToggle').addEventListener('click', function() {
+    var area = document.getElementById('profileArea');
+    var btn = document.getElementById('profileToggle');
+    if (area.style.display === 'none' || area.style.display === '') {
+        area.style.display = 'block';
+        btn.textContent = 'User Profile [click to collapse]';
+    } else {
+        area.style.display = 'none';
+        btn.textContent = 'User Profile [click to expand]';
+    }
+});
+
+document.getElementById('profileSaveBtn').addEventListener('click', function() {
+    saveProfile();
+});
+
+document.getElementById('profileClearBtn').addEventListener('click', function() {
+    var profileTextarea = getProfileTextarea();
+    profileTextarea.value = '';
+    var obj = {};
+    obj[STORAGE_KEY_PROFILE] = '';
+    chrome.storage.local.set(obj, function() {
+        setStatus('Profile cleared.');
+    });
+});
+
+// ========================================================
+// TEXTAREA CONTROLS: Clear / Copy / Paste
+// ========================================================
+document.getElementById('clearBtn').addEventListener('click', function() {
+    var textarea = getTextarea();
+    textarea.value = '';
+    saveTextareaContent();
+    setStatus('Textarea cleared.');
+});
+
+document.getElementById('copyBtn').addEventListener('click', function() {
+    var textarea = getTextarea();
+    var text = textarea.value.trim();
+    if (!text) {
+        setStatus('Nothing to copy - textarea is empty.');
+        return;
+    }
+    navigator.clipboard.writeText(text).then(function() {
+        setStatus('Copied to clipboard!');
+    }).catch(function() {
+        textarea.select();
+        document.execCommand('copy');
+        setStatus('Copied to clipboard (fallback).');
+    });
+});
+
+document.getElementById('clipPasteBtn').addEventListener('click', function() {
+    var textarea = getTextarea();
+    navigator.clipboard.readText().then(function(clipText) {
+        if (!clipText) {
+            setStatus('Clipboard is empty.');
+            return;
+        }
+        textarea.value = clipText;
+        saveTextareaContent();
+        setStatus('Pasted from clipboard.');
+    }).catch(function() {
+        setStatus('Clipboard read failed. Paste manually with Ctrl+V.');
+    });
+});
+
 // ========================================================
 // 1. EXTRACT FORM HTML
+//    Fetches userProfile from storage, includes it in
+//    the message so content.js can build the full prompt
 // ========================================================
 document.getElementById('extractBtn').addEventListener('click', function() {
     var textarea = getTextarea();
@@ -98,22 +237,26 @@ document.getElementById('extractBtn').addEventListener('click', function() {
         textarea.value = '';
         setStatus('Extracting...');
 
-        safeSendMessage(tab.id, { action: 'EXTRACT_FORM' }, function(response, error) {
-            if (error) {
-                setStatus(error);
-                return;
-            }
-            if (response && response.success && response.prompt) {
-                textarea.value = response.prompt;
+        // Fetch profile before sending extract message
+        getProfileValue(function(profile) {
+            safeSendMessage(tab.id, { action: 'EXTRACT_FORM', userProfile: profile }, function(response, error) {
+                if (error) {
+                    setStatus(error);
+                    return;
+                }
+                if (response && response.success && response.prompt) {
+                    textarea.value = response.prompt;
+                    saveTextareaContent();
 
-                navigator.clipboard.writeText(response.prompt).then(function() {
-                    setStatus('Prompt + Form HTML copied! Paste into any LLM.');
-                }).catch(function() {
-                    setStatus('Prompt loaded in textarea. Clipboard write failed - copy manually.');
-                });
-            } else {
-                setStatus('Extraction returned no data.');
-            }
+                    navigator.clipboard.writeText(response.prompt).then(function() {
+                        setStatus('Prompt + Form HTML copied! Paste into any LLM.');
+                    }).catch(function() {
+                        setStatus('Prompt loaded in textarea. Clipboard write failed - copy manually.');
+                    });
+                } else {
+                    setStatus('Extraction returned no data.');
+                }
+            });
         });
     });
 });
@@ -137,13 +280,8 @@ document.getElementById('pasteBtn').addEventListener('click', function() {
             return;
         }
 
-        if (!isLLMPage(tab.url)) {
-            // Not blocking, just informational
-        }
-
         safeSendMessage(tab.id, { action: 'PASTE_TO_LLM', text: text }, function(response, error) {
             if (error) {
-                // Fallback: inject directly
                 chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     func: function(payload) {
@@ -210,6 +348,7 @@ document.getElementById('injectBtn').addEventListener('click', function() {
 
     var cleanJson = JSON.stringify(parsed);
     textarea.value = cleanJson;
+    saveTextareaContent();
 
     chrome.storage.local.set({ formMapping: cleanJson }, function() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {

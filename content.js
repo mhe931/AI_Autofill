@@ -30,31 +30,33 @@ function showStatusOverlay(message) {
     setTimeout(function() { overlay.style.opacity = '0'; }, 2500);
 }
 
-// === Context-Aware Prompt Builder ===
-function buildFullContextPrompt(formHtml, history) {
+// === Context-Aware Prompt Builder (Dynamic Profile) ===
+// Accepts userProfile as a plain text string from chrome.storage.local
+function buildFullContextPrompt(formHtml, userProfile, history) {
     var lines = [];
 
+    // System Role
     lines.push("### SYSTEM INSTRUCTIONS");
-    lines.push("You are a Senior Data Engineer assisting with form automation.");
+    lines.push("You are a Senior Data Engineer and Career Advisor assisting with form automation.");
     lines.push("Analyze the HTML form below and generate a flat JSON object.");
     lines.push("Keys = form field identifiers (id, name, label text, or placeholder).");
-    lines.push("Values = the best professional answer based on the profile and context.");
-    lines.push("Output ONLY valid JSON. No markdown fences, no explanation.");
-    lines.push("");
-    lines.push("### APPLICANT PROFILE");
-    lines.push("Name: Daniel Ebrahimzadeh (Mohammad Hossein Ebrahimzadeh Esfahani)");
-    lines.push("Degree: M.Sc. Computing Sciences (AI & Data Engineering), University of Vaasa, Finland");
-    lines.push("Experience: 14+ years - Data Engineering, ETL/ELT, Analytics, Team Leadership");
-    lines.push("Recent Role: Data Manager at Digikala (largest e-commerce platform in the Middle East)");
-    lines.push("Core Stack: Python, PySpark, dbt, Snowflake, Airflow, SQL Server, PostgreSQL");
-    lines.push("Publications: Research on anomaly detection, Bayesian DTI analysis, generative AI architectures");
-    lines.push("GitHub: https://github.com/mhe931");
-    lines.push("LinkedIn: https://www.linkedin.com/in/danielebrahimzadeh/");
-    lines.push("Portfolio: https://mhe931.github.io/cv/");
+    lines.push("Values = the best professional answer derived from the applicant profile below.");
+    lines.push("For fields you cannot determine, provide a reasonable professional default.");
+    lines.push("Output ONLY valid JSON. No markdown fences, no code blocks, no explanation.");
     lines.push("");
 
+    // User Profile - Dynamic
+    lines.push("### USER PROFILE");
+    if (userProfile && userProfile.trim()) {
+        lines.push(userProfile.trim());
+    } else {
+        lines.push("[No profile configured. Please add your resume/bio in the extension User Profile section.]");
+    }
+    lines.push("");
+
+    // Historical context from data warehouse
     if (history && history.length > 0) {
-        lines.push("### HISTORICAL CONTEXT (Previously Captured Data)");
+        lines.push("### HISTORICAL CONTEXT (Previously Captured Form Data)");
         lines.push("Use these exact values when the form fields match:");
         history.forEach(function(item) {
             lines.push('- "' + item.label + '": "' + item.value + '" (source: ' + item.sourceUrl + ')');
@@ -62,6 +64,7 @@ function buildFullContextPrompt(formHtml, history) {
         lines.push("");
     }
 
+    // Form HTML
     lines.push("### TARGET FORM HTML");
     lines.push(formHtml);
 
@@ -73,6 +76,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     // --- EXTRACT: scrape form HTML and return prompt to popup ---
     if (request.action === 'EXTRACT_FORM') {
+        var userProfile = request.userProfile || '';
+
         chrome.storage.local.get(['localWarehouse'], function(result) {
             var history = result.localWarehouse || [];
 
@@ -93,7 +98,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 }
             }
 
-            var fullPrompt = buildFullContextPrompt(formHtml, history);
+            var fullPrompt = buildFullContextPrompt(formHtml, userProfile, history);
             showStatusOverlay('HTML + Profile Extracted!');
             sendResponse({ success: true, prompt: fullPrompt });
         });
