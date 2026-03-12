@@ -19,10 +19,18 @@
     <h2>3-Button Analyze-Generate-Inject Workflow [cite: 2026-03-12]</h2>
     <ol>
         <li><strong>Step 1: HTML Extraction.</strong> Open the target form (e.g., Webropol) and click <strong>"Extract Form HTML"</strong> in the extension popup. This scrapes the form and prepends the system instruction automatically to your clipboard.</li>
-        <li><strong>Step 2: LLM Interaction.</strong> Open your preferred external LLM (like ChatGPT/Claude), click inside the text area, and click <strong>"Paste to LLM"</strong> to input the form context alongside the system instructions. Generate the JSON map.</li>
+        <li><strong>Step 2: Contextual LLM Interaction.</strong> The extract script will automatically inject historical tabular context (like specific paths to "Social security translate.pdf" or historical answers) into your prompt. Paste this securely into your LLM.</li>
         <li><strong>Step 3: Dynamic Injection.</strong> Copy the resulting JSON output from the LLM. Go back to the form page and click <strong>"Execute Injection"</strong> in the extension. The extension will automatically read the JSON from your clipboard (or the text box) and intelligently fill out the fields via fuzzy matching [cite: 85, 95].</li>
         <li>Review the data and manually upload the required PDF attachments [cite: 2026-01-24].</li>
     </ol>
+    
+    <h2>Data Warehouse & Persistence</h2>
+    <p>The extension allows you to build a local dataset. Use the Data Management panel:</p>
+    <ul>
+        <li><strong>Capture Current Form Data:</strong> After successfully completing a form, click this to save all values (and any manually-typed local file paths) into a tabular relation tracking Labels, URLs, and Time.</li>
+        <li><strong>View Data Table:</strong> Generate an immediate HTML visualization of all saved mappings.</li>
+        <li><strong>Export / Import:</strong> Download your entire relational mapping schema as a <code>.json</code> file to backup or migrate between workstations [cite: 2026-03-12].</li>
+    </ul>
 
     <h2>Data Privacy</h2>
     <p>All data is stored locally within <code>chrome.storage.local</code>. No information is transmitted to external servers [cite: 2026-01-24].</p>

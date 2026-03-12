@@ -3,7 +3,19 @@
     <button id="extractBtn" style="background:#28a745; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 5px;">Extract Form HTML</button>
     <button id="pasteBtn" style="background:#ffc107; color:black; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 5px;">Paste to LLM</button>
     <textarea id="jsonInput" placeholder="Paste LLM-generated JSON here (or leave empty to use clipboard)..." style="width: 100%; height: 60px; margin-bottom: 5px; box-sizing: border-box; font-family: monospace; font-size: 10px;"></textarea>
-    <button id="injectBtn" style="background:#004c97; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px;">Execute Injection</button>
+    <button id="injectBtn" style="background:#004c97; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 10px;">Execute Injection</button>
+    
+    <!-- New Data Management Section -->
+    <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 5px;">
+        <h4 style="margin: 0 0 5px 0;">Data Management</h4>
+        <button id="captureBtn" style="background:#17a2b8; color:white; border:none; padding:5px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 3px; font-size: 11px;">Capture Current Form Data</button>
+        <button id="viewBtn" style="background:#6c757d; color:white; border:none; padding:5px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 3px; font-size: 11px;">View Data Table</button>
+        <div style="display: flex; gap: 4px;">
+            <button id="exportBtn" style="background:#007bff; color:white; border:none; padding:5px; width:50%; cursor:pointer; border-radius:4px; font-size: 11px;">Export (.json)</button>
+            <button id="importBtn" style="background:#dc3545; color:white; border:none; padding:5px; width:50%; cursor:pointer; border-radius:4px; font-size: 11px;">Import Backup</button>
+        </div>
+        <input type="file" id="fileInput" style="display: none;" accept=".json">
+    </div>
     <p style="font-size:10px; color:gray; margin-top:10px;"><a href="help.html" target="_blank">View Help & Instructions</a></p>
 </div>
 <script src="popup.js"></script>

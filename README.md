@@ -8,7 +8,8 @@ A high-performance Chrome Extension designed to automate the **Recognition of Pr
 - **3-Button "Analyze-Generate-Inject" Workflow**: Seamlessly extracts form HTML, pastes it directly into LLM prompts with custom logic, and automatically parses generated JSON for injection back into the form via clipboard integration [cite: 2026-03-12].
 - [cite_start]**Master's-Level Precision**: Pre-loaded with verified data including a **Data Manager** professional history (Digikala Group) and a **List of Publications** (Journal, Book, Conference)[cite: 1, 9, 11, 42].
 - **Event-Driven Architecture**: Uses an asynchronous trigger mechanism via the `scripting` API to ensure high stability and zero conversational framing [cite: 2026-01-24].
-- **Data Privacy**: No external API calls; all data injection is handled locally within the DOM context for maximum security.
+- **Data Privacy & Local Data Warehouse**: No external API calls are made natively. Includes a tabular Data Warehouse powered by `chrome.storage.local` with `unlimitedStorage`. Users can capture form nodes, map absolute local asset paths (e.g. `file:///C:/Users/danie/...`), and leverage context-aware Prompt Augmentation to pass relational history to the LLM [cite: 2026-01-24].
+- **Portability**: Native full JSON Data Backup & Restore architecture [cite: 2026-03-12].
 
 ## 📁 Repository Structure
 - `manifest.json`: Extension configuration and global permissions.

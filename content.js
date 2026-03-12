@@ -47,3 +47,49 @@ window.addEventListener('START_DYNAMIC_FILL', () => {
         });
     });
 });
+// Capture event to scrape currently filled forms into the discrete tabular database
+window.addEventListener('START_CAPTURE_FORM', () => {
+    const records = [];
+    const timestamp = new Date().toISOString();
+    const sourceUrl = window.location.href;
+
+    Array.from(document.forms).forEach(form => {
+        const fields = form.querySelectorAll('input, textarea, select');
+        fields.forEach(field => {
+            if (!field || !field.value.trim()) return; // skip empty or null
+
+            // Field Label logic extraction
+            const labelEl = field.closest('label');
+            let potentialLabel = "";
+            if (labelEl) potentialLabel = labelEl.innerText.trim();
+            if (!potentialLabel && field.id) {
+                const l = document.querySelector(`label[for="${field.id}"]`);
+                if (l) potentialLabel = l.innerText.trim();
+            }
+            if (!potentialLabel) potentialLabel = field.placeholder || field.name || field.id;
+            
+            // Note: Users can manually type asset paths like "file:///C:/Users/danie/Documents/EBRZ%20Academic%20resume%201.02.pdf" into fields before capture to map local assets.
+            
+            records.push({
+                label: potentialLabel.substring(0, 100), // restrict length
+                value: field.value,
+                sourceUrl: sourceUrl,
+                timestamp: timestamp
+            });
+        });
+    });
+
+    if (records.length === 0) {
+        alert("No completed fields detected to capture.");
+        return;
+    }
+
+    chrome.storage.local.get(['localWarehouse'], (result) => {
+        let existing = result.localWarehouse || [];
+        existing = existing.concat(records);
+        
+        chrome.storage.local.set({ localWarehouse: existing }, () => {
+            alert(`Captured ${records.length} fields to Local Data Warehouse!`);
+        });
+    });
+});
