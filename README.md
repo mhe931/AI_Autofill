@@ -1,8 +1,11 @@
 # AI Form Filler 🚀
 
-A high-performance Chrome Extension designed to automate **Dynamic Form Mapping** and **Context Injection**. This tool utilizes advanced data engineering logic to dynamically map professional achievements and JSON schemas directly into complex administrative forms.
+An intelligent automation engine for cross-platform form mapping and dynamic data injection.
 
 Developed by **[Daniel Ebrahimzadeh](https://github.com/mhe931)**.
+
+## ⚠️ URL Support Limitation
+Due to Chromium security policies, the extraction and injection scripts **cannot** execute on internal browser pages (e.g., `chrome://`, `edge://`, or `chrome-extension://`). Ensure you are operating on a valid `http://` or `https://` target URL.
 
 ## 🛠 Features
 - **Global Deployment**: Configured with `<all_urls>` permissions to trigger automation across various administrative platforms.

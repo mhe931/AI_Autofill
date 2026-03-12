@@ -34,16 +34,44 @@ function showStatusOverlay(message) {
 }
 
 async function copyToClipboard(text) {
+    // Primary path: modern async Clipboard API
     try {
         await navigator.clipboard.writeText(text);
         showStatusOverlay('HTML Copied!');
-    } catch (err) {
-        console.error('Failed to copy text: ', err);
-        if (err.name === 'NotAllowedError' || err.message.includes('permission')) {
-            showStatusOverlay('Permission Denied: Please click the lock icon in your URL bar and set Clipboard to Allow.');
+        return;
+    } catch (primaryErr) {
+        console.warn('navigator.clipboard.writeText failed, attempting execCommand fallback:', primaryErr);
+    }
+
+    // Fallback path: hidden textarea + execCommand (works without focus)
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        Object.assign(ta.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '1px',
+            height: '1px',
+            opacity: '0',
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none',
+            background: 'transparent'
+        });
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const success = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (success) {
+            showStatusOverlay('HTML Copied!');
         } else {
-            showStatusOverlay('Extraction Failed');
+            throw new Error('execCommand copy returned false');
         }
+    } catch (fallbackErr) {
+        console.error('Both clipboard strategies failed:', fallbackErr);
+        showStatusOverlay('Permission Denied: Click the lock icon in the URL bar and set Clipboard to Allow.');
     }
 }
 
@@ -62,11 +90,13 @@ window.addEventListener('START_EXTRACT_HTML', () => {
             basePrompt += "\n";
         }
 
+        // Aggressive DOM scraping: form > outermost div > full body
         let formsHtml = "";
         if (document.forms.length > 0) {
             formsHtml = Array.from(document.forms).map(f => f.outerHTML).join('\n');
         } else {
-            formsHtml = document.body.innerHTML;
+            const topDiv = document.body.querySelector('div');
+            formsHtml = topDiv ? topDiv.outerHTML : document.body.innerHTML;
         }
 
         await copyToClipboard(basePrompt + formsHtml);

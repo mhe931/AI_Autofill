@@ -30,8 +30,8 @@
         <li><strong>Step 2: Use 'Extract HTML' for target context.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> to securely write the standardized architecture and contextual arrays to your clipboard.</li>
         <li><strong>Step 3: Process via AI and execute 'Dynamic Injection'.</strong> Feed the clipboard query to external LLMs, copy the JSON response, and trigger 'Execute Injection' inside the target tab for automated, heuristic mapping.</li>
     </ol>
-    
-    <h2>Data Warehouse & Persistence</h2>
+
+    <h2>Data Warehouse &amp; Persistence</h2>
     <p>We advocate a strictly "Local First" architecture:</p>
     <ul>
         <li><strong>Capture Current Form Data:</strong> After finishing a form logically, press Capture to safely register those text responses or exact local file paths into a persistent database.</li>
@@ -49,9 +49,19 @@
         <li>Reload the page and try again.</li>
     </ol>
 
+    <h2>Best Practices</h2>
+    <div class="feature">
+        <ul style="margin:0; padding-left:20px;">
+            <li><strong>Active Tab Focus:</strong> Always ensure the target tab is active (clicked into) before pressing <strong>Extract Form HTML</strong>. This maintains clipboard write access in browsers that restrict background clipboard operations.</li>
+            <li><strong>LLM Paste:</strong> Before clicking <strong>Paste to LLM</strong>, click once directly inside the LLM chat input field to ensure the target element is focused and detectable by the injection engine.</li>
+            <li><strong>JSON Integrity:</strong> Validate LLM-generated JSON before pasting into the textarea. Malformed JSON silently blocks the injection pipeline.</li>
+            <li><strong>Data Capture Cadence:</strong> Run <strong>Capture Current Form Data</strong> after each major form completion to maintain a high-fidelity local context for future prompt augmentation.</li>
+        </ul>
+    </div>
+
     <h2>About the Developer</h2>
     <p>Lead Developer: <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a><br>
-    Master’s Student in Computing Sciences (AI & Data Engineering)</p>
+    Master's Student in Computing Sciences (AI &amp; Data Engineering)</p>
 
     <footer>
         &copy; 2026 Daniel Ebrahimzadeh | <a href="https://github.com/mhe931" target="_blank">github.com/mhe931</a>

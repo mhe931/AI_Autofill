@@ -1,22 +1,56 @@
+function checkClipboardPermission() {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'clipboard-write' }).then(status => {
+        const box = document.getElementById('msg-container');
+        if (!box) return;
+        if (status.state === 'granted') {
+            // Permission already granted — keep box hidden
+            box.style.display = 'none';
+        } else {
+            // Prompt or denied — surface the guidance preemptively
+            box.innerText = '⚠️ Clipboard access not yet granted. Click the lock icon in the URL bar of your target page and set Clipboard to Allow.';
+            box.style.display = 'block';
+        }
+        // Re-check if the permission state changes (e.g. user updates Site Settings)
+        status.onchange = () => checkClipboardPermission();
+    }).catch(() => { /* older browsers may not support query */ });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.get(['formMapping'], (result) => {
         if (result.formMapping) {
             document.getElementById('jsonInput').value = result.formMapping;
         }
     });
+    checkClipboardPermission();
+});
+
+// Re-verify when the popup regains visibility (user returns from Site Settings)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        checkClipboardPermission();
+    }
 });
 
 function setStatus(msg) {
-    const el = document.getElementById('status-message');
+    const el = document.getElementById('msg-container');
     if (el) {
         el.innerText = msg;
-        el.style.opacity = '1';
-        setTimeout(() => { el.style.opacity = '0'; }, 2000);
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 3000);
     }
+}
+
+function isSupportedUrl(url) {
+    return url && !url.startsWith('chrome://') && !url.startsWith('edge://');
 }
 
 document.getElementById('extractBtn').addEventListener('click', () => {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (!isSupportedUrl(tabs[0].url)) {
+            setStatus('URL Support Limitation: Cannot run on internal browser pages (e.g. chrome://).');
+            return;
+        }
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
             func: () => { window.dispatchEvent(new CustomEvent('START_EXTRACT_HTML')); }
@@ -29,6 +63,10 @@ document.getElementById('extractBtn').addEventListener('click', () => {
 // Data Management Event Listeners
 document.getElementById('captureBtn').addEventListener('click', () => {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (!isSupportedUrl(tabs[0].url)) {
+            setStatus('URL Support Limitation: Cannot run on internal browser pages.');
+            return;
+        }
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
             func: () => { window.dispatchEvent(new CustomEvent('START_CAPTURE_FORM')); }
@@ -89,6 +127,10 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
 
 document.getElementById('pasteBtn').addEventListener('click', () => {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (!isSupportedUrl(tabs[0].url)) {
+            setStatus('URL Support Limitation: Cannot run on internal browser pages.');
+            return;
+        }
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
             func: async () => {
@@ -142,6 +184,10 @@ document.getElementById('injectBtn').addEventListener('click', async () => {
         JSON.parse(jsonStr); 
         chrome.storage.local.set({ formMapping: jsonStr }, () => {
             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                if (!isSupportedUrl(tabs[0].url)) {
+                    setStatus('URL Support Limitation: Cannot run on internal browser pages.');
+                    return;
+                }
                 chrome.scripting.executeScript({
                     target: {tabId: tabs[0].id},
                     func: () => { window.dispatchEvent(new CustomEvent('START_DYNAMIC_FILL')); }
