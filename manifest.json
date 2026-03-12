@@ -5,7 +5,11 @@
   "description": "Professional RPL and Credit Transfer automation tool for University of Vaasa students.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage",
+    "clipboardRead",
+    "clipboardWrite",
+    "unlimitedStorage"
   ],
   "icons": {
     "16": "icon.png",

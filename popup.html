@@ -1,6 +1,9 @@
-<div style="width: 200px; padding: 10px; text-align: center;">
+<div style="width: 250px; padding: 10px; text-align: center;">
     <h3 style="margin-top:0;">AI Form Filler</h3>
-    <button id="fillBtn" style="background:#004c97; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px;">Fill from Resume Data</button>
+    <button id="extractBtn" style="background:#28a745; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 5px;">Extract Form HTML</button>
+    <button id="pasteBtn" style="background:#ffc107; color:black; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px; margin-bottom: 5px;">Paste to LLM</button>
+    <textarea id="jsonInput" placeholder="Paste LLM-generated JSON here (or leave empty to use clipboard)..." style="width: 100%; height: 60px; margin-bottom: 5px; box-sizing: border-box; font-family: monospace; font-size: 10px;"></textarea>
+    <button id="injectBtn" style="background:#004c97; color:white; border:none; padding:10px; width:100%; cursor:pointer; border-radius:4px;">Execute Injection</button>
     <p style="font-size:10px; color:gray; margin-top:10px;"><a href="help.html" target="_blank">View Help & Instructions</a></p>
 </div>
 <script src="popup.js"></script>

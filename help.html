@@ -16,15 +16,15 @@
         <strong>Automated Mapping:</strong> Instantly fills academic justifications based on Master's level research and professional Data Manager experience[cite: 42, 63, 113].
     </div>
 
-    <h2>How to Use</h2>
+    <h2>3-Button Analyze-Generate-Inject Workflow [cite: 2026-03-12]</h2>
     <ol>
-        <li>Open the University of Vaasa Webropol form.</li>
-        <li>Click the <strong>AI Form Filler</strong> icon in your browser bar.</li>
-        <li>Select <strong>"Fill Form"</strong>.</li>
+        <li><strong>Step 1: HTML Extraction.</strong> Open the target form (e.g., Webropol) and click <strong>"Extract Form HTML"</strong> in the extension popup. This scrapes the form and prepends the system instruction automatically to your clipboard.</li>
+        <li><strong>Step 2: LLM Interaction.</strong> Open your preferred external LLM (like ChatGPT/Claude), click inside the text area, and click <strong>"Paste to LLM"</strong> to input the form context alongside the system instructions. Generate the JSON map.</li>
+        <li><strong>Step 3: Dynamic Injection.</strong> Copy the resulting JSON output from the LLM. Go back to the form page and click <strong>"Execute Injection"</strong> in the extension. The extension will automatically read the JSON from your clipboard (or the text box) and intelligently fill out the fields via fuzzy matching [cite: 85, 95].</li>
         <li>Review the data and manually upload the required PDF attachments [cite: 2026-01-24].</li>
     </ol>
 
     <h2>Data Privacy</h2>
-    <p>All data is stored locally within the <code>content.js</code> file. No information is transmitted to external servers [cite: 2026-01-24].</p>
+    <p>All data is stored locally within <code>chrome.storage.local</code>. No information is transmitted to external servers [cite: 2026-01-24].</p>
 </body>
 </html>

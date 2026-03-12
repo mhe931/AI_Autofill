@@ -4,6 +4,8 @@ A high-performance Chrome Extension designed to automate the **Recognition of Pr
 
 ## 🛠 Features
 - **Global Deployment**: Configured with `<all_urls>` permissions to trigger automation across various administrative platforms.
+- **Dynamic JSON Mapping**: Supports dynamic, LLM-generated form mapping by persisting an external JSON map in `chrome.storage.local` and using fuzzy/ID matching for universal injection [cite: 2026-03-12].
+- **3-Button "Analyze-Generate-Inject" Workflow**: Seamlessly extracts form HTML, pastes it directly into LLM prompts with custom logic, and automatically parses generated JSON for injection back into the form via clipboard integration [cite: 2026-03-12].
 - [cite_start]**Master's-Level Precision**: Pre-loaded with verified data including a **Data Manager** professional history (Digikala Group) and a **List of Publications** (Journal, Book, Conference)[cite: 1, 9, 11, 42].
 - **Event-Driven Architecture**: Uses an asynchronous trigger mechanism via the `scripting` API to ensure high stability and zero conversational framing [cite: 2026-01-24].
 - **Data Privacy**: No external API calls; all data injection is handled locally within the DOM context for maximum security.
