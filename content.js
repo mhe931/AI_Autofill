@@ -154,7 +154,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         return;
     }
 
-    // --- DYNAMIC FILL ---
+    // --- DYNAMIC FILL (with dropdown support + priority matching) ---
     if (request.action === 'FILL_FORM') {
         var mapData = {};
         try {
@@ -165,51 +165,159 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             return;
         }
 
-        var filledCount = 0;
+        var inputCount = 0;
+        var dropdownCount = 0;
         var allFields = document.querySelectorAll('input, textarea, select');
-        allFields.forEach(function (field) {
-            if (!field) return;
 
-            var fieldId = (field.id || "").toLowerCase();
-            var fieldName = (field.name || "").toLowerCase();
+        // Dispatch full event sequence for framework compatibility
+        function dispatchFieldEvents(field) {
+            field.dispatchEvent(new Event('focus', { bubbles: true }));
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            field.dispatchEvent(new Event('blur', { bubbles: true }));
+        }
+
+        // Select dropdown option by matching value or display text
+        function setSelectValue(selectEl, targetValue) {
+            var tv = String(targetValue).trim().toLowerCase();
+            var options = selectEl.options;
+            // Pass 1: exact match on option value
+            for (var i = 0; i < options.length; i++) {
+                if (options[i].value.trim().toLowerCase() === tv) {
+                    selectEl.selectedIndex = i;
+                    return true;
+                }
+            }
+            // Pass 2: exact match on option display text
+            for (var i = 0; i < options.length; i++) {
+                if (options[i].text.trim().toLowerCase() === tv) {
+                    selectEl.selectedIndex = i;
+                    return true;
+                }
+            }
+            // Pass 3: partial match on display text (contains)
+            for (var i = 0; i < options.length; i++) {
+                if (options[i].text.trim().toLowerCase().includes(tv) ||
+                    tv.includes(options[i].text.trim().toLowerCase())) {
+                    selectEl.selectedIndex = i;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Priority-weighted field matching
+        function findMatchingValue(field) {
+            var fieldId = (field.id || "").toLowerCase().trim();
+            var fieldName = (field.name || "").toLowerCase().trim();
             var labelFor = "";
             if (field.id) {
                 var lbl = document.querySelector('label[for="' + field.id + '"]');
-                labelFor = lbl ? lbl.innerText.toLowerCase() : "";
+                labelFor = lbl ? lbl.innerText.toLowerCase().trim() : "";
             }
-            var closestLabel = field.closest('label') ? field.closest('label').innerText.toLowerCase() : "";
-            var fieldPlaceholder = (field.placeholder || "").toLowerCase();
+            var closestLabel = field.closest('label') ? field.closest('label').innerText.toLowerCase().trim() : "";
+            var fieldPlaceholder = (field.placeholder || "").toLowerCase().trim();
+            var ariaLabel = (field.getAttribute('aria-label') || "").toLowerCase().trim();
             var container = field.closest('.question-container, .form-group, .field-wrapper, div');
-            var containerText = container ? container.innerText.toLowerCase() : "";
+            var containerText = container ? container.innerText.toLowerCase().trim() : "";
 
             var entries = Object.entries(mapData);
-            for (var i = 0; i < entries.length; i++) {
-                var key = entries[i][0];
-                var value = entries[i][1];
-                if (!key) continue;
-                var searchKey = key.toLowerCase();
 
-                if (
-                    fieldId === searchKey ||
-                    fieldName === searchKey ||
-                    fieldId.includes(searchKey) ||
-                    fieldName.includes(searchKey) ||
-                    labelFor.includes(searchKey) ||
-                    closestLabel.includes(searchKey) ||
-                    fieldPlaceholder.includes(searchKey) ||
-                    containerText.includes(searchKey)
-                ) {
-                    field.value = value;
-                    field.dispatchEvent(new Event('input', { bubbles: true }));
-                    field.dispatchEvent(new Event('change', { bubbles: true }));
-                    filledCount++;
-                    break;
+            // Priority 1: Exact ID or Name match
+            for (var i = 0; i < entries.length; i++) {
+                var searchKey = entries[i][0].toLowerCase().trim();
+                if (!searchKey) continue;
+                if (fieldId === searchKey || fieldName === searchKey) {
+                    return entries[i][1];
                 }
+            }
+
+            // Priority 2: Exact label-for or aria-label match
+            for (var i = 0; i < entries.length; i++) {
+                var searchKey = entries[i][0].toLowerCase().trim();
+                if (!searchKey) continue;
+                if (labelFor === searchKey || ariaLabel === searchKey) {
+                    return entries[i][1];
+                }
+            }
+
+            // Priority 3: Partial ID or Name contains
+            for (var i = 0; i < entries.length; i++) {
+                var searchKey = entries[i][0].toLowerCase().trim();
+                if (!searchKey) continue;
+                if ((fieldId && fieldId.includes(searchKey)) ||
+                    (fieldName && fieldName.includes(searchKey))) {
+                    return entries[i][1];
+                }
+            }
+
+            // Priority 4: Label text, placeholder, closest label, container text
+            for (var i = 0; i < entries.length; i++) {
+                var searchKey = entries[i][0].toLowerCase().trim();
+                if (!searchKey) continue;
+                if ((labelFor && labelFor.includes(searchKey)) ||
+                    (closestLabel && closestLabel.includes(searchKey)) ||
+                    (fieldPlaceholder && fieldPlaceholder.includes(searchKey)) ||
+                    (ariaLabel && ariaLabel.includes(searchKey)) ||
+                    (containerText && containerText.includes(searchKey))) {
+                    return entries[i][1];
+                }
+            }
+
+            return undefined;
+        }
+
+        allFields.forEach(function (field) {
+            if (!field) return;
+
+            var matchedValue = findMatchingValue(field);
+            if (matchedValue === undefined) return;
+
+            var valueStr = String(matchedValue);
+
+            if (field.tagName === 'SELECT') {
+                if (setSelectValue(field, valueStr)) {
+                    dispatchFieldEvents(field);
+                    dropdownCount++;
+                }
+            } else if (field.tagName === 'INPUT' && (field.type === 'checkbox' || field.type === 'radio')) {
+                var boolVal = valueStr.toLowerCase();
+                var shouldCheck = (boolVal === 'true' || boolVal === 'yes' || boolVal === '1' || boolVal === 'on');
+                if (field.type === 'radio') {
+                    shouldCheck = (field.value.toLowerCase() === valueStr.toLowerCase());
+                }
+                field.checked = shouldCheck;
+                dispatchFieldEvents(field);
+                inputCount++;
+            } else {
+                // Standard input/textarea
+                var nativeSetter = null;
+                try {
+                    if (field.tagName === 'TEXTAREA') {
+                        nativeSetter = Object.getOwnPropertyDescriptor(
+                            window.HTMLTextAreaElement.prototype, 'value'
+                        ).set;
+                    } else {
+                        nativeSetter = Object.getOwnPropertyDescriptor(
+                            window.HTMLInputElement.prototype, 'value'
+                        ).set;
+                    }
+                } catch (e) { /* fallback */ }
+
+                if (nativeSetter) {
+                    nativeSetter.call(field, valueStr);
+                } else {
+                    field.value = valueStr;
+                }
+                dispatchFieldEvents(field);
+                inputCount++;
             }
         });
 
-        showStatusOverlay('Form Filled! (' + filledCount + ' fields)');
-        sendResponse({ success: true, msg: 'Filled ' + filledCount + ' fields.' });
+        var totalFilled = inputCount + dropdownCount;
+        var summary = totalFilled + ' fields (' + inputCount + ' inputs, ' + dropdownCount + ' dropdowns)';
+        showStatusOverlay('Form Filled! ' + summary);
+        sendResponse({ success: true, msg: 'Filled ' + summary, inputs: inputCount, dropdowns: dropdownCount });
         return;
     }
 

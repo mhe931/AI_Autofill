@@ -44,7 +44,7 @@
         </li>
         <li>
             <strong>3 &rarr; Paste AI JSON &amp; Execute</strong><br>
-            Copy the LLM JSON response. Paste it into the extension textarea (replacing the prompt). Click <strong>"Execute Injection"</strong>. The extension strips any <code>```json</code> markdown fences, validates JSON, then maps keys to form fields using multi-signal matching (id, name, label, placeholder, container text).
+            Copy the LLM JSON response. Paste it into the extension textarea (replacing the prompt). Click <strong>"Execute Injection"</strong>. The extension strips any <code>```json</code> markdown fences, validates JSON, then fills the form using priority-weighted matching (exact id &gt; exact name &gt; label/aria-label &gt; partial matches &gt; placeholder/container text). <strong>Dropdown menus</strong> (<code>&lt;select&gt;</code>) are supported: the extension matches option values or display text automatically. Checkboxes and radio buttons are also handled.
         </li>
     </ol>
 
