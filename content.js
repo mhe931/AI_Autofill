@@ -27,7 +27,7 @@ function showStatusOverlay(message) {
     overlay.innerText = message;
     void overlay.offsetWidth;
     overlay.style.opacity = '1';
-    setTimeout(function() { overlay.style.opacity = '0'; }, 2500);
+    setTimeout(function () { overlay.style.opacity = '0'; }, 2500);
 }
 
 // === Context-Aware Prompt Builder (Dynamic Profile) ===
@@ -41,7 +41,7 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     lines.push("Analyze the HTML form below and generate a flat JSON object.");
     lines.push("Keys = form field identifiers (id, name, label text, or placeholder).");
     lines.push("Values = the best professional answer derived from the applicant profile below.");
-    lines.push("For fields you cannot determine, provide a reasonable professional default.");
+    lines.push("For fields you cannot determine, provide a reasonable professional default based on the information you have from me.");
     lines.push("Output ONLY valid JSON. No markdown fences, no code blocks, no explanation.");
     lines.push("");
 
@@ -50,7 +50,7 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     if (userProfile && userProfile.trim()) {
         lines.push(userProfile.trim());
     } else {
-        lines.push("[No profile configured. Please add your resume/bio in the extension User Profile section.]");
+        lines.push("use the historical context to fill the form as best as possible and make up the rest based on the context provided based on the information you have from me");
     }
     lines.push("");
 
@@ -58,7 +58,7 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     if (history && history.length > 0) {
         lines.push("### HISTORICAL CONTEXT (Previously Captured Form Data)");
         lines.push("Use these exact values when the form fields match:");
-        history.forEach(function(item) {
+        history.forEach(function (item) {
             lines.push('- "' + item.label + '": "' + item.value + '" (source: ' + item.sourceUrl + ')');
         });
         lines.push("");
@@ -72,27 +72,27 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
 }
 
 // === Message Handler ===
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
     // --- EXTRACT: scrape form HTML and return prompt to popup ---
     if (request.action === 'EXTRACT_FORM') {
         var userProfile = request.userProfile || '';
 
-        chrome.storage.local.get(['localWarehouse'], function(result) {
+        chrome.storage.local.get(['localWarehouse'], function (result) {
             var history = result.localWarehouse || [];
 
             var formHtml = "";
             if (document.forms.length > 0) {
-                formHtml = Array.from(document.forms).map(function(f) { return f.outerHTML; }).join('\n');
+                formHtml = Array.from(document.forms).map(function (f) { return f.outerHTML; }).join('\n');
             } else {
                 var inputs = document.querySelectorAll('input, textarea, select');
                 if (inputs.length > 0) {
                     var containers = new Set();
-                    inputs.forEach(function(inp) {
+                    inputs.forEach(function (inp) {
                         var wrapper = inp.closest('div, section, fieldset, main') || document.body;
                         containers.add(wrapper);
                     });
-                    formHtml = Array.from(containers).map(function(c) { return c.outerHTML; }).join('\n');
+                    formHtml = Array.from(containers).map(function (c) { return c.outerHTML; }).join('\n');
                 } else {
                     formHtml = document.body.innerHTML;
                 }
@@ -116,11 +116,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var el = document.activeElement;
         if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT' && !el.isContentEditable)) {
             el = document.querySelector('#prompt-textarea')
-              || document.querySelector('.ql-editor')
-              || document.querySelector('div[contenteditable="true"]')
-              || document.querySelector('[contenteditable="true"]')
-              || document.querySelector('textarea')
-              || document.querySelector('[role="textbox"]');
+                || document.querySelector('.ql-editor')
+                || document.querySelector('div[contenteditable="true"]')
+                || document.querySelector('[contenteditable="true"]')
+                || document.querySelector('textarea')
+                || document.querySelector('[role="textbox"]');
         }
 
         if (el) {
@@ -167,7 +167,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         var filledCount = 0;
         var allFields = document.querySelectorAll('input, textarea, select');
-        allFields.forEach(function(field) {
+        allFields.forEach(function (field) {
             if (!field) return;
 
             var fieldId = (field.id || "").toLowerCase();
@@ -219,7 +219,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var timestamp = new Date().toISOString();
         var sourceUrl = window.location.href;
 
-        document.querySelectorAll('input, textarea, select').forEach(function(field) {
+        document.querySelectorAll('input, textarea, select').forEach(function (field) {
             if (!field || !field.value.trim()) return;
 
             var potentialLabel = "";
@@ -245,10 +245,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             return;
         }
 
-        chrome.storage.local.get(['localWarehouse'], function(result) {
+        chrome.storage.local.get(['localWarehouse'], function (result) {
             var existing = result.localWarehouse || [];
             existing = existing.concat(records);
-            chrome.storage.local.set({ localWarehouse: existing }, function() {
+            chrome.storage.local.set({ localWarehouse: existing }, function () {
                 showStatusOverlay('Captured ' + records.length + ' fields!');
                 sendResponse({ success: true, msg: 'Captured ' + records.length + ' fields.' });
             });
