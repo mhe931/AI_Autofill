@@ -26,9 +26,9 @@
 
     <h2>3-Button Analyze-Generate-Inject Workflow</h2>
     <ol>
-        <li><strong>Step 1: HTML Extraction.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> in the popup. This automatically scrapes the parent form boundaries (or the full DOM if nested) and injects a standardized LLM system instruction prefix into your clipboard.</li>
-        <li><strong>Step 2: AI Context Processing.</strong> Open an external generative AI (like Gemini, ChatGPT, or Claude). Click the <strong>"Paste to LLM"</strong> button to deploy the aggregated HTML string along with historical contextual tabular data into the chat field.</li>
-        <li><strong>Step 3: Dynamic Form Injection.</strong> After the LLM constructs your mapped JSON schema, copy its output. Go back to the form and click <strong>"Execute Injection"</strong> to dynamically match those generated values to all relevant input fields and textareas.</li>
+        <li><strong>Step 1: HTML Extraction.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> in the popup. This automatically scrapes the parent form boundaries (or the full DOM if nested) and injects a standardized LLM system instruction prefix into your clipboard. A distinct <strong>"HTML Copied!"</strong> notification will verify extraction.</li>
+        <li><strong>Step 2: AI Context Processing.</strong> Open an external generative AI (like Gemini, ChatGPT, or Claude). Click the <strong>"Paste to LLM"</strong> button to deploy the aggregated HTML string along with historical contextual tabular data into the chat field. Watch for the <strong>"Prompt Pasted!"</strong> popup notification ensuring success.</li>
+        <li><strong>Step 3: Dynamic Form Injection.</strong> After the LLM constructs your mapped JSON schema, copy its output. Go back to the form and click <strong>"Execute Injection"</strong> to dynamically match those generated values to all relevant input fields and textareas. You'll receive a <strong>"Form Filled!"</strong> confirmation overlay.</li>
     </ol>
     
     <h2>Data Warehouse & Persistence</h2>

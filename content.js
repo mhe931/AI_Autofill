@@ -1,3 +1,38 @@
+function showStatusOverlay(message) {
+    let overlay = document.getElementById('ai-form-filler-status-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'ai-form-filler-status-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            backgroundColor: '#121212',
+            color: '#f2c100',
+            border: '2px solid #f2c100',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            zIndex: '2147483647',
+            fontFamily: 'sans-serif',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.5)',
+            opacity: '0',
+            transition: 'opacity 0.3s ease-in-out',
+            pointerEvents: 'none'
+        });
+        document.body.appendChild(overlay);
+    }
+    overlay.innerText = message;
+    
+    void overlay.offsetWidth; // Force reflow
+    overlay.style.opacity = '1';
+    
+    setTimeout(() => {
+        overlay.style.opacity = '0';
+    }, 2000);
+}
+
 window.addEventListener('START_EXTRACT_HTML', () => {
     chrome.storage.local.get(['localWarehouse'], (result) => {
         const history = result.localWarehouse || [];
@@ -21,9 +56,10 @@ window.addEventListener('START_EXTRACT_HTML', () => {
         }
 
         navigator.clipboard.writeText(basePrompt + formsHtml).then(() => {
-            alert('Form HTML and augmented context instructions copied to clipboard!');
+            showStatusOverlay('HTML Copied!');
         }).catch(err => {
             console.error('Failed to copy text: ', err);
+            showStatusOverlay('Extraction Failed');
         });
     });
 });
@@ -40,13 +76,13 @@ window.addEventListener('START_DYNAMIC_FILL', () => {
             mapData = JSON.parse(result.formMapping);
         } catch (e) {
             console.error('Invalid JSON mapping data.', e);
-            return; // Maintain explicit error handling
+            return; 
         }
 
         Array.from(document.forms).forEach(form => {
             const fields = form.querySelectorAll('input, textarea, select');
             fields.forEach(field => {
-                if (!field) return; // Explicit error handling for null DOM elements
+                if (!field) return; 
 
                 const containerText = field.closest('.question-container')?.innerText?.toLowerCase() || "";
                 const fieldId = field.id?.toLowerCase() || "";
@@ -58,7 +94,6 @@ window.addEventListener('START_DYNAMIC_FILL', () => {
                     if (!key) continue;
                     const searchKey = key.toLowerCase();
                     
-                    // Fuzzy-matching logic [cite: 85, 95]
                     if (
                         containerText.includes(searchKey) || 
                         fieldId.includes(searchKey) || 
@@ -67,7 +102,6 @@ window.addEventListener('START_DYNAMIC_FILL', () => {
                         fieldPlaceholder.includes(searchKey)
                     ) {
                         field.value = value;
-                        // Trigger necessary events [cite: 2026-01-24 zero framing]
                         field.dispatchEvent(new Event('input', { bubbles: true }));
                         field.dispatchEvent(new Event('change', { bubbles: true }));
                         break;
@@ -75,9 +109,10 @@ window.addEventListener('START_DYNAMIC_FILL', () => {
                 }
             });
         });
+        showStatusOverlay('Form Filled!');
     });
 });
-// Capture event to scrape currently filled forms into the discrete tabular database
+
 window.addEventListener('START_CAPTURE_FORM', () => {
     const records = [];
     const timestamp = new Date().toISOString();
@@ -86,9 +121,8 @@ window.addEventListener('START_CAPTURE_FORM', () => {
     Array.from(document.forms).forEach(form => {
         const fields = form.querySelectorAll('input, textarea, select');
         fields.forEach(field => {
-            if (!field || !field.value.trim()) return; // skip empty or null
+            if (!field || !field.value.trim()) return; 
 
-            // Field Label logic extraction
             const labelEl = field.closest('label');
             let potentialLabel = "";
             if (labelEl) potentialLabel = labelEl.innerText.trim();
@@ -98,10 +132,8 @@ window.addEventListener('START_CAPTURE_FORM', () => {
             }
             if (!potentialLabel) potentialLabel = field.placeholder || field.name || field.id;
             
-            // Note: Users can manually type asset paths like "file:///C:/Users/danie/Documents/EBRZ%20Academic%20resume%201.02.pdf" into fields before capture to map local assets.
-            
             records.push({
-                label: potentialLabel.substring(0, 100), // restrict length
+                label: potentialLabel.substring(0, 100), 
                 value: field.value,
                 sourceUrl: sourceUrl,
                 timestamp: timestamp
@@ -110,7 +142,7 @@ window.addEventListener('START_CAPTURE_FORM', () => {
     });
 
     if (records.length === 0) {
-        alert("No completed fields detected to capture.");
+        showStatusOverlay("No completed fields detected to capture.");
         return;
     }
 
@@ -119,7 +151,7 @@ window.addEventListener('START_CAPTURE_FORM', () => {
         existing = existing.concat(records);
         
         chrome.storage.local.set({ localWarehouse: existing }, () => {
-            alert(`Captured ${records.length} fields to Local Data Warehouse!`);
+            showStatusOverlay(`Captured ${records.length} fields!`);
         });
     });
 });

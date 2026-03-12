@@ -6,11 +6,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function setStatus(msg) {
+    const el = document.getElementById('status-message');
+    if (el) {
+        el.innerText = msg;
+        el.style.opacity = '1';
+        setTimeout(() => { el.style.opacity = '0'; }, 2000);
+    }
+}
+
 document.getElementById('extractBtn').addEventListener('click', () => {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
             func: () => { window.dispatchEvent(new CustomEvent('START_EXTRACT_HTML')); }
+        }, () => {
+            setStatus('Extraction Triggered!');
         });
     });
 });
@@ -21,6 +32,8 @@ document.getElementById('captureBtn').addEventListener('click', () => {
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
             func: () => { window.dispatchEvent(new CustomEvent('START_CAPTURE_FORM')); }
+        }, () => {
+            setStatus('Capture Executed!');
         });
     });
 });
@@ -78,8 +91,9 @@ document.getElementById('pasteBtn').addEventListener('click', () => {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
-            func: () => {
-                navigator.clipboard.readText().then(text => {
+            func: async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
                     let el = document.activeElement;
                     if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT' && !el.isContentEditable)) {
                         el = document.querySelector('#prompt-textarea') || document.querySelector('textarea, [contenteditable="true"]');
@@ -93,12 +107,18 @@ document.getElementById('pasteBtn').addEventListener('click', () => {
                         }
                         el.dispatchEvent(new Event('input', { bubbles: true }));
                         el.dispatchEvent(new Event('change', { bubbles: true }));
+                        return { success: true, msg: 'Prompt Pasted!' };
                     } else {
-                        alert('Could not find input field/textarea in the LLM chat window.');
+                        return { success: false, msg: 'Target input not found.' };
                     }
-                }).catch(err => {
+                } catch(err) {
                     console.error('Failed to read clipboard contents: ', err);
-                });
+                    return { success: false, msg: 'Clipboard access failed.' };
+                }
+            }
+        }, (results) => {
+            if (results && results[0] && results[0].result) {
+                setStatus(results[0].result.msg);
             }
         });
     });
@@ -122,10 +142,12 @@ document.getElementById('injectBtn').addEventListener('click', async () => {
                 chrome.scripting.executeScript({
                     target: {tabId: tabs[0].id},
                     func: () => { window.dispatchEvent(new CustomEvent('START_DYNAMIC_FILL')); }
+                }, () => {
+                    setStatus('Injection Triggered!');
                 });
             });
         });
     } catch (e) {
-        alert('Invalid JSON! Please check format or clipboard content.');
+        setStatus('Invalid JSON!');
     }
 });

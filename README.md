@@ -7,6 +7,7 @@ Developed by **[Daniel Ebrahimzadeh](https://github.com/mhe931)**.
 ## 🛠 Features
 - **Global Deployment**: Configured with `<all_urls>` permissions to trigger automation across various administrative platforms.
 - **Dynamic Extraction Logic**: Intelligently scrapes the active `<form>` or DOM tree and automatically formats requests directly into the clipboard with standardized LLM prompts.
+- **Real-time User Feedback**: Ensures robust visual continuity via transient status overlays ('HTML Copied!', 'Prompt Pasted!', 'Form Filled!') embedded directly within the active DOM and extension UI.
 - **Dynamic JSON Mapping**: Supports dynamic, LLM-generated form mapping by persisting an external JSON map in `chrome.storage.local` and using fuzzy/ID matching for universal injection [cite: 2026-03-12].
 - **3-Button "Analyze-Generate-Inject" Workflow**: Seamlessly extracts form HTML, pastes it directly into LLM prompts with custom logic, and automatically parses generated JSON for injection back into the form via clipboard integration.
 - **Cross-Platform Dark Mode**: A unified `#121212` / `#f2c100` global dark theme spanning the UI and documentation layers, ensuring a zero-strain premium aesthetic.
