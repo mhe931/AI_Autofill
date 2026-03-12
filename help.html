@@ -17,51 +17,63 @@
 <body>
     <header>
         <h1>AI Form Filler - Documentation</h1>
-        <p>A general-purpose toolkit developed by <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a>.</p>
+        <p>An intelligent automation suite developed by <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a>.</p>
     </header>
 
     <div class="feature">
-        <strong>Overview:</strong> This extension empowers users to seamlessly transfer full form contexts to an external LLM, augment prompts with historical local data, and dynamically inject mapped responses back into the DOM using intelligent fuzzy matching algorithms.
+        <strong>Overview:</strong> This extension extracts form HTML, merges it with your professional profile and historical context, and copies the combined prompt to the clipboard. You paste it into any LLM, then inject the AI-generated JSON response back into the form for automated filling.
     </div>
 
-    <h2>3-Button Analyze-Generate-Inject Workflow</h2>
+    <h2>3-Step Workflow</h2>
     <ol>
-        <li><strong>Step 1: Ensure Site Permissions allow Clipboard access.</strong> If an action fails, check your browser's site settings.</li>
-        <li><strong>Step 2: Use 'Extract HTML' for target context.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> to securely write the standardized architecture and contextual arrays to your clipboard.</li>
-        <li><strong>Step 3: Process via AI and execute 'Dynamic Injection'.</strong> Feed the clipboard query to external LLMs, copy the JSON response, and trigger 'Execute Injection' inside the target tab for automated, heuristic mapping.</li>
+        <li>
+            <strong>Extract (Form HTML + Profile)</strong><br>
+            Navigate to your target form. Click <strong>"Extract Form HTML"</strong>. The extension scrapes all <code>&lt;form&gt;</code> elements (or the full DOM) and prepends Daniel Ebrahimzadeh's professional profile, the system instructions for the LLM, and any historical context from the Local Data Warehouse. The complete prompt is copied to your clipboard. You'll see <strong>"HTML + Profile Copied!"</strong> in the overlay.
+        </li>
+        <li>
+            <strong>Paste to AI</strong><br>
+            Navigate to an LLM interface (Gemini, ChatGPT, Claude, etc.). Click <strong>"Paste to LLM"</strong>. The extension reads your clipboard and injects the full prompt into the active chat input field using <code>execCommand('insertText')</code> for maximum framework compatibility. If the page is detected as a known LLM domain, the paste proceeds directly; otherwise, the extension warns but still attempts injection.
+        </li>
+        <li>
+            <strong>Paste AI JSON &amp; Execute Injection</strong><br>
+            Copy the LLM's JSON response. Paste it into the extension's textarea (or leave empty to read from clipboard). Click <strong>"Execute Injection"</strong>. The extension strips markdown code fences, validates JSON, and maps keys to form fields using a multi-signal fuzzy matcher (id, name, label, placeholder, container text). Each matched field is filled and dispatches <code>input</code> and <code>change</code> events.
+        </li>
     </ol>
 
     <h2>Data Warehouse &amp; Persistence</h2>
-    <p>We advocate a strictly "Local First" architecture:</p>
+    <p>All data stays local via <code>chrome.storage.local</code>:</p>
     <ul>
-        <li><strong>Capture Current Form Data:</strong> After finishing a form logically, press Capture to safely register those text responses or exact local file paths into a persistent database.</li>
-        <li><strong>View Data Table:</strong> Generate an immediate HTML visualization of all saved context mappings.</li>
-        <li><strong>Export / Import:</strong> Use JSON blobs for system-agnostic migrations across workstations.</li>
+        <li><strong>Capture Current Form Data:</strong> Scrapes all filled fields into a timestamped record set.</li>
+        <li><strong>View Data Table:</strong> Opens a formatted HTML table of all captured context.</li>
+        <li><strong>Export / Import:</strong> Full JSON backup and restore for cross-machine portability.</li>
     </ul>
 
     <h2>Troubleshooting</h2>
-    <h3>Resolving Clipboard Access Errors</h3>
-    <p>Browsers restrict clipboard read/write access to prevent abuse. If you see a "Permission Denied" alert:</p>
+    <h3>Clipboard Permission Errors</h3>
+    <p>If extraction or pasting fails with "Permission Denied":</p>
     <ol>
-        <li>Click the <strong>Lock Icon</strong> in your URL bar next to the domain name.</li>
+        <li>Click the <strong>Lock Icon</strong> in the URL bar.</li>
         <li>Select <strong>Site Settings</strong>.</li>
-        <li>Scroll down to <strong>Clipboard</strong> and change it from 'Ask' (or 'Block') to <strong>'Allow'</strong>.</li>
-        <li>Reload the page and try again.</li>
+        <li>Set <strong>Clipboard</strong> to <strong>Allow</strong>.</li>
+        <li>Reload the page and retry.</li>
     </ol>
+
+    <h3>URL Support Limitation</h3>
+    <p>The extension cannot inject scripts into internal browser pages (<code>chrome://</code>, <code>edge://</code>). Navigate to an <code>http://</code> or <code>https://</code> page.</p>
 
     <h2>Best Practices</h2>
     <div class="feature">
         <ul style="margin:0; padding-left:20px;">
-            <li><strong>Active Tab Focus:</strong> Always ensure the target tab is active (clicked into) before pressing <strong>Extract Form HTML</strong>. This maintains clipboard write access in browsers that restrict background clipboard operations.</li>
-            <li><strong>LLM Paste:</strong> Before clicking <strong>Paste to LLM</strong>, click once directly inside the LLM chat input field to ensure the target element is focused and detectable by the injection engine.</li>
-            <li><strong>JSON Integrity:</strong> Validate LLM-generated JSON before pasting into the textarea. Malformed JSON silently blocks the injection pipeline.</li>
-            <li><strong>Data Capture Cadence:</strong> Run <strong>Capture Current Form Data</strong> after each major form completion to maintain a high-fidelity local context for future prompt augmentation.</li>
+            <li><strong>Active Tab Focus:</strong> Click into the target tab before pressing Extract to maintain clipboard write access.</li>
+            <li><strong>LLM Input Focus:</strong> Click inside the LLM chat input box before pressing Paste to ensure element detection.</li>
+            <li><strong>JSON Validation:</strong> If the LLM wraps output in <code>```json</code> fences, the extension strips them automatically. But verify structure if injection fails.</li>
+            <li><strong>Capture Often:</strong> Run Capture after each form completion to build historical context for future prompts.</li>
         </ul>
     </div>
 
     <h2>About the Developer</h2>
     <p>Lead Developer: <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a><br>
-    Master's Student in Computing Sciences (AI &amp; Data Engineering)</p>
+    M.Sc. Computing Sciences (AI &amp; Data Engineering), University of Vaasa</p>
 
     <footer>
         &copy; 2026 Daniel Ebrahimzadeh | <a href="https://github.com/mhe931" target="_blank">github.com/mhe931</a>

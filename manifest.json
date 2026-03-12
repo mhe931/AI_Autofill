@@ -5,6 +5,7 @@
   "description": "A high-performance automation suite for intelligent form mapping and dynamic data injection.",
   "permissions": [
     "activeTab",
+    "tabs",
     "scripting",
     "storage",
     "clipboardRead",
