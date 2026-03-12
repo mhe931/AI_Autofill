@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Form Filler",
   "version": "1.0",
-  "description": "Professional RPL and Credit Transfer automation tool for University of Vaasa students.",
+  "description": "A high-performance automation suite for intelligent form mapping and dynamic data injection.",
   "permissions": [
     "activeTab",
     "scripting",

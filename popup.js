@@ -113,6 +113,9 @@ document.getElementById('pasteBtn').addEventListener('click', () => {
                     }
                 } catch(err) {
                     console.error('Failed to read clipboard contents: ', err);
+                    if (err.name === 'NotAllowedError' || err.message.includes('permission')) {
+                        return { success: false, msg: 'Permission Denied: Please click the lock icon in your URL bar and set Clipboard to Allow.' };
+                    }
                     return { success: false, msg: 'Clipboard access failed.' };
                 }
             }

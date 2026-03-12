@@ -26,9 +26,9 @@
 
     <h2>3-Button Analyze-Generate-Inject Workflow</h2>
     <ol>
-        <li><strong>Step 1: HTML Extraction.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> in the popup. This automatically scrapes the parent form boundaries (or the full DOM if nested) and injects a standardized LLM system instruction prefix into your clipboard. A distinct <strong>"HTML Copied!"</strong> notification will verify extraction.</li>
-        <li><strong>Step 2: AI Context Processing.</strong> Open an external generative AI (like Gemini, ChatGPT, or Claude). Click the <strong>"Paste to LLM"</strong> button to deploy the aggregated HTML string along with historical contextual tabular data into the chat field. Watch for the <strong>"Prompt Pasted!"</strong> popup notification ensuring success.</li>
-        <li><strong>Step 3: Dynamic Form Injection.</strong> After the LLM constructs your mapped JSON schema, copy its output. Go back to the form and click <strong>"Execute Injection"</strong> to dynamically match those generated values to all relevant input fields and textareas. You'll receive a <strong>"Form Filled!"</strong> confirmation overlay.</li>
+        <li><strong>Step 1: Ensure Site Permissions allow Clipboard access.</strong> If an action fails, check your browser's site settings.</li>
+        <li><strong>Step 2: Use 'Extract HTML' for target context.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> to securely write the standardized architecture and contextual arrays to your clipboard.</li>
+        <li><strong>Step 3: Process via AI and execute 'Dynamic Injection'.</strong> Feed the clipboard query to external LLMs, copy the JSON response, and trigger 'Execute Injection' inside the target tab for automated, heuristic mapping.</li>
     </ol>
     
     <h2>Data Warehouse & Persistence</h2>
@@ -38,6 +38,16 @@
         <li><strong>View Data Table:</strong> Generate an immediate HTML visualization of all saved context mappings.</li>
         <li><strong>Export / Import:</strong> Use JSON blobs for system-agnostic migrations across workstations.</li>
     </ul>
+
+    <h2>Troubleshooting</h2>
+    <h3>Resolving Clipboard Access Errors</h3>
+    <p>Browsers restrict clipboard read/write access to prevent abuse. If you see a "Permission Denied" alert:</p>
+    <ol>
+        <li>Click the <strong>Lock Icon</strong> in your URL bar next to the domain name.</li>
+        <li>Select <strong>Site Settings</strong>.</li>
+        <li>Scroll down to <strong>Clipboard</strong> and change it from 'Ask' (or 'Block') to <strong>'Allow'</strong>.</li>
+        <li>Reload the page and try again.</li>
+    </ol>
 
     <h2>About the Developer</h2>
     <p>Lead Developer: <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a><br>

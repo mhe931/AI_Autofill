@@ -33,8 +33,22 @@ function showStatusOverlay(message) {
     }, 2000);
 }
 
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showStatusOverlay('HTML Copied!');
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        if (err.name === 'NotAllowedError' || err.message.includes('permission')) {
+            showStatusOverlay('Permission Denied: Please click the lock icon in your URL bar and set Clipboard to Allow.');
+        } else {
+            showStatusOverlay('Extraction Failed');
+        }
+    }
+}
+
 window.addEventListener('START_EXTRACT_HTML', () => {
-    chrome.storage.local.get(['localWarehouse'], (result) => {
+    chrome.storage.local.get(['localWarehouse'], async (result) => {
         const history = result.localWarehouse || [];
         
         let basePrompt = "As a Senior Data Engineer, analyze the provided HTML form. Using the user's resume [cite: 16] and publication list[cite: 2], generate a JSON object where keys are form element identifiers (IDs, names, or associated labels) and values are the most accurate professional responses. Ensure justifications for RPL align with university learning outcomes [cite: 2026-03-12].\n\n";
@@ -55,12 +69,7 @@ window.addEventListener('START_EXTRACT_HTML', () => {
             formsHtml = document.body.innerHTML;
         }
 
-        navigator.clipboard.writeText(basePrompt + formsHtml).then(() => {
-            showStatusOverlay('HTML Copied!');
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            showStatusOverlay('Extraction Failed');
-        });
+        await copyToClipboard(basePrompt + formsHtml);
     });
 });
 
