@@ -1,3 +1,33 @@
+window.addEventListener('START_EXTRACT_HTML', () => {
+    chrome.storage.local.get(['localWarehouse'], (result) => {
+        const history = result.localWarehouse || [];
+        
+        let basePrompt = "As a Senior Data Engineer, analyze the provided HTML form. Using the user's resume [cite: 16] and publication list[cite: 2], generate a JSON object where keys are form element identifiers (IDs, names, or associated labels) and values are the most accurate professional responses. Ensure justifications for RPL align with university learning outcomes [cite: 2026-03-12].\n\n";
+        
+        if (history && history.length > 0) {
+            basePrompt += "### HISTORICAL CONTEXT (Local Data Warehouse):\n";
+            basePrompt += "Use the following exact values and asset file paths if the form fields relate to professional experience or academic writing [cite: 42, 63].\n";
+            history.forEach(item => {
+               basePrompt += `- Field: "${item.label}" | Value/Path: "${item.value}" | Source: ${item.sourceUrl}\n`; 
+            });
+            basePrompt += "\n";
+        }
+
+        let formsHtml = "";
+        if (document.forms.length > 0) {
+            formsHtml = Array.from(document.forms).map(f => f.outerHTML).join('\n');
+        } else {
+            formsHtml = document.body.innerHTML;
+        }
+
+        navigator.clipboard.writeText(basePrompt + formsHtml).then(() => {
+            alert('Form HTML and augmented context instructions copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    });
+});
+
 window.addEventListener('START_DYNAMIC_FILL', () => {
     chrome.storage.local.get(['formMapping'], (result) => {
         if (!result.formMapping) {

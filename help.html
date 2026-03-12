@@ -1,38 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <title>AI Form Filler - Documentation</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: auto; padding: 20px; }
-        h1 { color: #004c97; border-bottom: 2px solid #f2c100; padding-bottom: 10px; }
-        .feature { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 5px solid #004c97; }
-        code { background: #eee; padding: 2px 5px; border-radius: 4px; }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #ffffff; background-color: #121212; max-width: 800px; margin: auto; padding: 20px; }
+        h1, h2, h3, h4 { color: #f2c100; }
+        h1 { border-bottom: 2px solid #1e1e1e; padding-bottom: 10px; }
+        .feature { background: #1e1e1e; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 5px solid #f2c100; }
+        code { background: #1e1e1e; padding: 2px 5px; border-radius: 4px; border: 1px solid #333; color: #f2c100; }
+        a { color: #f2c100; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        footer { margin-top: 40px; border-top: 1px solid #1e1e1e; padding-top: 20px; text-align: center; color: #aaa; font-size: 0.9em; }
     </style>
 </head>
 <body>
-    <h1>AI Form Filler - Documentation</h1>
-    <p>This extension is designed for <strong>Daniel Ebrahimzadeh</strong> to automate the Recognition of Prior Learning (RPL) process at the University of Vaasa[cite: 17, 24, 25].</p>
-    
+    <header>
+        <h1>AI Form Filler - Documentation</h1>
+        <p>A general-purpose toolkit developed by <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a>.</p>
+    </header>
+
     <div class="feature">
-        <strong>Automated Mapping:</strong> Instantly fills academic justifications based on Master's level research and professional Data Manager experience[cite: 42, 63, 113].
+        <strong>Overview:</strong> This extension empowers users to seamlessly transfer full form contexts to an external LLM, augment prompts with historical local data, and dynamically inject mapped responses back into the DOM using intelligent fuzzy matching algorithms.
     </div>
 
-    <h2>3-Button Analyze-Generate-Inject Workflow [cite: 2026-03-12]</h2>
+    <h2>3-Button Analyze-Generate-Inject Workflow</h2>
     <ol>
-        <li><strong>Step 1: HTML Extraction.</strong> Open the target form (e.g., Webropol) and click <strong>"Extract Form HTML"</strong> in the extension popup. This scrapes the form and prepends the system instruction automatically to your clipboard.</li>
-        <li><strong>Step 2: Contextual LLM Interaction.</strong> The extract script will automatically inject historical tabular context (like specific paths to "Social security translate.pdf" or historical answers) into your prompt. Paste this securely into your LLM.</li>
-        <li><strong>Step 3: Dynamic Injection.</strong> Copy the resulting JSON output from the LLM. Go back to the form page and click <strong>"Execute Injection"</strong> in the extension. The extension will automatically read the JSON from your clipboard (or the text box) and intelligently fill out the fields via fuzzy matching [cite: 85, 95].</li>
-        <li>Review the data and manually upload the required PDF attachments [cite: 2026-01-24].</li>
+        <li><strong>Step 1: HTML Extraction.</strong> Open your target form. Click <strong>"Extract Form HTML"</strong> in the popup. This automatically scrapes the parent form boundaries (or the full DOM if nested) and injects a standardized LLM system instruction prefix into your clipboard.</li>
+        <li><strong>Step 2: AI Context Processing.</strong> Open an external generative AI (like Gemini, ChatGPT, or Claude). Click the <strong>"Paste to LLM"</strong> button to deploy the aggregated HTML string along with historical contextual tabular data into the chat field.</li>
+        <li><strong>Step 3: Dynamic Form Injection.</strong> After the LLM constructs your mapped JSON schema, copy its output. Go back to the form and click <strong>"Execute Injection"</strong> to dynamically match those generated values to all relevant input fields and textareas.</li>
     </ol>
     
     <h2>Data Warehouse & Persistence</h2>
-    <p>The extension allows you to build a local dataset. Use the Data Management panel:</p>
+    <p>We advocate a strictly "Local First" architecture:</p>
     <ul>
-        <li><strong>Capture Current Form Data:</strong> After successfully completing a form, click this to save all values (and any manually-typed local file paths) into a tabular relation tracking Labels, URLs, and Time.</li>
-        <li><strong>View Data Table:</strong> Generate an immediate HTML visualization of all saved mappings.</li>
-        <li><strong>Export / Import:</strong> Download your entire relational mapping schema as a <code>.json</code> file to backup or migrate between workstations [cite: 2026-03-12].</li>
+        <li><strong>Capture Current Form Data:</strong> After finishing a form logically, press Capture to safely register those text responses or exact local file paths into a persistent database.</li>
+        <li><strong>View Data Table:</strong> Generate an immediate HTML visualization of all saved context mappings.</li>
+        <li><strong>Export / Import:</strong> Use JSON blobs for system-agnostic migrations across workstations.</li>
     </ul>
 
-    <h2>Data Privacy</h2>
-    <p>All data is stored locally within <code>chrome.storage.local</code>. No information is transmitted to external servers [cite: 2026-01-24].</p>
+    <h2>About the Developer</h2>
+    <p>Lead Developer: <a href="https://github.com/mhe931" target="_blank">Daniel Ebrahimzadeh</a><br>
+    Master’s Student in Computing Sciences (AI & Data Engineering)</p>
+
+    <footer>
+        &copy; 2026 Daniel Ebrahimzadeh | <a href="https://github.com/mhe931" target="_blank">github.com/mhe931</a>
+    </footer>
 </body>
 </html>
