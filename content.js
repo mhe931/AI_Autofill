@@ -77,9 +77,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     // --- EXTRACT: scrape form HTML and return prompt to popup ---
     if (request.action === 'EXTRACT_FORM') {
         var userProfile = request.userProfile || '';
+        var includeHistory = request.includeHistory;
 
         chrome.storage.local.get(['localWarehouse'], function (result) {
-            var history = result.localWarehouse || [];
+            var history = includeHistory ? (result.localWarehouse || []) : [];
 
             var formHtml = "";
             if (document.forms.length > 0) {

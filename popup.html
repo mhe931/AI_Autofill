@@ -28,6 +28,8 @@
         .profile-area { display: none; margin-top: 5px; }
         #profileInput { width: 100%; height: 100px; font-family: monospace; font-size: 10px; background: #1e1e1e; color: #ffffff; border: 1px solid #333; border-radius: 4px; padding: 6px; resize: vertical; margin-bottom: 5px; }
         .profile-controls { display: flex; gap: 4px; }
+        .checkbox-container { text-align: left; margin-bottom: 8px; font-size: 11px; color: #aaa; }
+        .checkbox-container label { cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .footer-link { font-size: 10px; margin-top: 10px; }
         .footer-link a { color: #f2c100; text-decoration: none; }
     </style>
@@ -36,6 +38,9 @@
 <div class="container">
     <h3>AI Form Filler</h3>
     <button id="extractBtn" class="main-btn">1 &rarr; Extract Form HTML</button>
+    <div class="checkbox-container">
+        <label><input type="checkbox" id="includeHistoryCb"> Include Data Table in Prompt</label>
+    </div>
     <button id="pasteBtn" class="main-btn">2 &rarr; Paste to LLM</button>
     <div class="textarea-controls">
         <button id="clearBtn" class="ctrl-btn">Clear</button>
@@ -68,6 +73,7 @@
             <button id="exportBtn" class="data-btn">Export (.json)</button>
             <button id="importBtn" class="data-btn">Import Backup</button>
         </div>
+        <button id="clearDataBtn" class="data-btn" style="margin-top: 3px; color: #ff5555; border-color: #552222; background: #2a1111;">Clear Data Table</button>
         <input type="file" id="fileInput" style="display: none;" accept=".json">
     </div>
     <p class="footer-link"><a href="help.html" target="_blank">View Help &amp; Instructions</a></p>

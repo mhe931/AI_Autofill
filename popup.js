@@ -226,6 +226,7 @@ document.getElementById('clipPasteBtn').addEventListener('click', function() {
 // ========================================================
 document.getElementById('extractBtn').addEventListener('click', function() {
     var textarea = getTextarea();
+    var includeHistory = document.getElementById('includeHistoryCb').checked;
 
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         var tab = tabs[0];
@@ -239,7 +240,7 @@ document.getElementById('extractBtn').addEventListener('click', function() {
 
         // Fetch profile before sending extract message
         getProfileValue(function(profile) {
-            safeSendMessage(tab.id, { action: 'EXTRACT_FORM', userProfile: profile }, function(response, error) {
+            safeSendMessage(tab.id, { action: 'EXTRACT_FORM', userProfile: profile, includeHistory: includeHistory }, function(response, error) {
                 if (error) {
                     setStatus(error);
                     return;
@@ -419,6 +420,14 @@ document.getElementById('exportBtn').addEventListener('click', function() {
 
 document.getElementById('importBtn').addEventListener('click', function() {
     document.getElementById('fileInput').click();
+});
+
+document.getElementById('clearDataBtn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to clear the entire Data Table?')) {
+        chrome.storage.local.remove('localWarehouse', function() {
+            setStatus('Data table cleared.');
+        });
+    }
 });
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
