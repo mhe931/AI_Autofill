@@ -212,15 +212,22 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             var fieldId = (field.id || "").toLowerCase().trim();
             var fieldName = (field.name || "").toLowerCase().trim();
             var labelFor = "";
-            if (field.id) {
-                var lbl = document.querySelector('label[for="' + field.id + '"]');
-                labelFor = lbl ? lbl.innerText.toLowerCase().trim() : "";
-            }
-            var closestLabel = field.closest('label') ? field.closest('label').innerText.toLowerCase().trim() : "";
+            try {
+                if (field.id) {
+                    // Safe attribute selector querying to avoid DOM exceptions with weird IDs
+                    var safeId = field.id.replace(/"/g, '\\"');
+                    var lbl = document.querySelector('label[for="' + safeId + '"]');
+                    labelFor = lbl ? (lbl.innerText || lbl.textContent || "").toLowerCase().trim() : "";
+                }
+            } catch (e) { /* ignore safe query errors */ }
+            
+            var closestLabelNode = field.closest('label');
+            var closestLabel = closestLabelNode ? (closestLabelNode.innerText || closestLabelNode.textContent || "").toLowerCase().trim() : "";
             var fieldPlaceholder = (field.placeholder || "").toLowerCase().trim();
             var ariaLabel = (field.getAttribute('aria-label') || "").toLowerCase().trim();
+            
             var container = field.closest('.question-container, .form-group, .field-wrapper, div');
-            var containerText = container ? container.innerText.toLowerCase().trim() : "";
+            var containerText = container ? (container.innerText || container.textContent || "").toLowerCase().trim() : "";
 
             var entries = Object.entries(mapData);
 
@@ -269,49 +276,59 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         }
 
         allFields.forEach(function (field) {
-            if (!field) return;
+            try {
+                if (!field) return;
 
-            var matchedValue = findMatchingValue(field);
-            if (matchedValue === undefined) return;
-
-            var valueStr = String(matchedValue);
-
-            if (field.tagName === 'SELECT') {
-                if (setSelectValue(field, valueStr)) {
-                    dispatchFieldEvents(field);
-                    dropdownCount++;
+                // File inputs cannot be programmatically filled with text values.
+                if (field.tagName === 'INPUT' && field.type && field.type.toLowerCase() === 'file') {
+                    return;
                 }
-            } else if (field.tagName === 'INPUT' && (field.type === 'checkbox' || field.type === 'radio')) {
-                var boolVal = valueStr.toLowerCase();
-                var shouldCheck = (boolVal === 'true' || boolVal === 'yes' || boolVal === '1' || boolVal === 'on');
-                if (field.type === 'radio') {
-                    shouldCheck = (field.value.toLowerCase() === valueStr.toLowerCase());
-                }
-                field.checked = shouldCheck;
-                dispatchFieldEvents(field);
-                inputCount++;
-            } else {
-                // Standard input/textarea
-                var nativeSetter = null;
-                try {
-                    if (field.tagName === 'TEXTAREA') {
-                        nativeSetter = Object.getOwnPropertyDescriptor(
-                            window.HTMLTextAreaElement.prototype, 'value'
-                        ).set;
-                    } else {
-                        nativeSetter = Object.getOwnPropertyDescriptor(
-                            window.HTMLInputElement.prototype, 'value'
-                        ).set;
+
+                var matchedValue = findMatchingValue(field);
+                if (matchedValue === undefined || matchedValue === null) return;
+
+                var valueStr = String(matchedValue);
+
+                if (field.tagName === 'SELECT') {
+                    if (setSelectValue(field, valueStr)) {
+                        dispatchFieldEvents(field);
+                        dropdownCount++;
                     }
-                } catch (e) { /* fallback */ }
-
-                if (nativeSetter) {
-                    nativeSetter.call(field, valueStr);
+                } else if (field.tagName === 'INPUT' && (field.type === 'checkbox' || field.type === 'radio')) {
+                    var boolVal = valueStr.toLowerCase();
+                    var shouldCheck = (boolVal === 'true' || boolVal === 'yes' || boolVal === '1' || boolVal === 'on');
+                    if (field.type === 'radio') {
+                        shouldCheck = (field.value.toLowerCase() === valueStr.toLowerCase());
+                    }
+                    field.checked = shouldCheck;
+                    dispatchFieldEvents(field);
+                    inputCount++;
                 } else {
-                    field.value = valueStr;
+                    // Standard input/textarea
+                    var nativeSetter = null;
+                    try {
+                        if (field.tagName === 'TEXTAREA') {
+                            nativeSetter = Object.getOwnPropertyDescriptor(
+                                window.HTMLTextAreaElement.prototype, 'value'
+                            ).set;
+                        } else {
+                            nativeSetter = Object.getOwnPropertyDescriptor(
+                                window.HTMLInputElement.prototype, 'value'
+                            ).set;
+                        }
+                    } catch (e) { /* fallback */ }
+
+                    if (nativeSetter) {
+                        nativeSetter.call(field, valueStr);
+                    } else {
+                        field.value = valueStr;
+                    }
+                    dispatchFieldEvents(field);
+                    inputCount++;
                 }
-                dispatchFieldEvents(field);
-                inputCount++;
+            } catch (fieldError) {
+                // If a specific field violently errors (e.g. security rejection), log but keep looping!
+                console.warn('AI Form Filler: Failed to mapped field', field, fieldError);
             }
         });
 
