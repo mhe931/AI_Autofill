@@ -41,13 +41,13 @@
     <div class="checkbox-container">
         <label><input type="checkbox" id="includeHistoryCb"> Include Data Table in Prompt</label>
     </div>
-    <button id="pasteBtn" class="main-btn">2 &rarr; Paste to LLM</button>
+    <button id="copyFormBtn" class="main-btn">2 &rarr; Extract &amp; Copy Form</button>
     <div class="textarea-controls">
         <button id="clearBtn" class="ctrl-btn">Clear</button>
         <button id="copyBtn" class="ctrl-btn">Copy</button>
         <button id="clipPasteBtn" class="ctrl-btn">Paste</button>
     </div>
-    <textarea id="jsonInput" placeholder="Step 1: Click Extract (prompt appears here + clipboard).&#10;Step 2: Paste to LLM on the AI chat page.&#10;Step 3: Copy AI JSON, paste here, click Execute."></textarea>
+    <textarea id="jsonInput" placeholder="Step 1: Extract a prompt with your profile, or use Step 2 for the form only.&#10;Step 2: Copy the form prompt and paste it into an LLM yourself.&#10;Step 3: Paste the JSON response here and click Execute."></textarea>
     <button id="injectBtn" class="primary-btn">3 &rarr; Execute Injection</button>
 
     <div id="msg-container"></div>

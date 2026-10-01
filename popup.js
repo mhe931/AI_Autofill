@@ -32,13 +32,6 @@ function isSupportedUrl(url) {
     return url && (url.startsWith('http://') || url.startsWith('https://'));
 }
 
-function isLLMPage(url) {
-    if (!url) return false;
-    var domains = ['gemini.google.com','chatgpt.com','chat.openai.com','claude.ai',
-                   'copilot.microsoft.com','poe.com','perplexity.ai'];
-    return domains.some(function(d) { return url.includes(d); });
-}
-
 function getTextarea() {
     return document.getElementById('jsonInput');
 }
@@ -263,63 +256,35 @@ document.getElementById('extractBtn').addEventListener('click', function() {
 });
 
 // ========================================================
-// 2. PASTE TO LLM
+// 2. EXTRACT AND COPY FORM ONLY
 // ========================================================
-document.getElementById('pasteBtn').addEventListener('click', function() {
+document.getElementById('copyFormBtn').addEventListener('click', function() {
     var textarea = getTextarea();
-    var text = textarea.value.trim();
-
-    if (!text) {
-        setStatus('Textarea is empty. Run "Extract Form HTML" first.');
-        return;
-    }
-
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         var tab = tabs[0];
-        if (!isSupportedUrl(tab.url)) {
-            setStatus('Navigate to an LLM page (http/https) first.');
+        if (!tab || !isSupportedUrl(tab.url)) {
+            setStatus('Navigate to an http/https form page first.');
             return;
         }
 
-        safeSendMessage(tab.id, { action: 'PASTE_TO_LLM', text: text }, function(response, error) {
+        setStatus('Extracting form...');
+        safeSendMessage(tab.id, { action: 'EXTRACT_FORM_ONLY' }, function(response, error) {
             if (error) {
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: function(payload) {
-                        var el = document.activeElement;
-                        if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT' && !el.isContentEditable)) {
-                            el = document.querySelector('#prompt-textarea')
-                              || document.querySelector('.ql-editor')
-                              || document.querySelector('div[contenteditable="true"]')
-                              || document.querySelector('[contenteditable="true"]')
-                              || document.querySelector('textarea')
-                              || document.querySelector('[role="textbox"]');
-                        }
-                        if (el) {
-                            el.focus();
-                            if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
-                                el.innerText = '';
-                                document.execCommand('insertText', false, payload);
-                            } else {
-                                el.value = payload;
-                            }
-                            el.dispatchEvent(new Event('input', { bubbles: true }));
-                            el.dispatchEvent(new Event('change', { bubbles: true }));
-                            return { success: true, msg: 'Prompt Pasted!' };
-                        }
-                        return { success: false, msg: 'No input found. Click inside the chat box first.' };
-                    },
-                    args: [text]
-                }, function(results) {
-                    if (results && results[0] && results[0].result) {
-                        setStatus(results[0].result.msg);
-                    } else {
-                        setStatus('Paste attempted.');
-                    }
-                });
-            } else if (response) {
-                setStatus(response.msg);
+                setStatus(error);
+                return;
             }
+            if (!response || !response.success || !response.prompt) {
+                setStatus(response && response.msg ? response.msg : 'Extraction returned no data.');
+                return;
+            }
+
+            textarea.value = response.prompt;
+            saveTextareaContent();
+            navigator.clipboard.writeText(response.prompt).then(function() {
+                setStatus('Form prompt copied. Paste it into an LLM.');
+            }).catch(function() {
+                setStatus('Form prompt loaded in textarea. Clipboard write failed; copy manually.');
+            });
         });
     });
 });

@@ -71,8 +71,45 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     return lines.join("\n");
 }
 
+function getFormHtml() {
+    if (document.forms.length > 0) {
+        return Array.from(document.forms).map(function (form) { return form.outerHTML; }).join('\n');
+    }
+    var inputs = document.querySelectorAll('input, textarea, select');
+    if (inputs.length > 0) {
+        var containers = new Set();
+        inputs.forEach(function (input) {
+            containers.add(input.closest('div, section, fieldset, main') || document.body);
+        });
+        return Array.from(containers).map(function (container) { return container.outerHTML; }).join('\n');
+    }
+    return document.body.innerHTML;
+}
+
+function buildFormOnlyPrompt(formHtml) {
+    return [
+        'Use the form HTML below to generate a flat JSON object with one key per field.',
+        'Use each field\'s id, name, label, or placeholder as its key so the values can be matched to the form.',
+        'Supply a suitable value for each field. For select fields, use an option value or visible option text.',
+        'For checkboxes, use true or false. For radio fields, use the selected option value.',
+        'Return only a valid JSON object. No markdown fences or explanation.',
+        '',
+        '### FORM HTML',
+        formHtml
+    ].join('\n');
+}
+
 // === Message Handler ===
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+
+    if (request.action === 'EXTRACT_FORM_ONLY') {
+        if (!document.querySelector('input, textarea, select')) {
+            sendResponse({ success: false, msg: 'No form fields found on this page.' });
+            return;
+        }
+        sendResponse({ success: true, prompt: buildFormOnlyPrompt(getFormHtml()) });
+        return;
+    }
 
     // --- EXTRACT: scrape form HTML and return prompt to popup ---
     if (request.action === 'EXTRACT_FORM') {
@@ -82,77 +119,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         chrome.storage.local.get(['localWarehouse'], function (result) {
             var history = includeHistory ? (result.localWarehouse || []) : [];
 
-            var formHtml = "";
-            if (document.forms.length > 0) {
-                formHtml = Array.from(document.forms).map(function (f) { return f.outerHTML; }).join('\n');
-            } else {
-                var inputs = document.querySelectorAll('input, textarea, select');
-                if (inputs.length > 0) {
-                    var containers = new Set();
-                    inputs.forEach(function (inp) {
-                        var wrapper = inp.closest('div, section, fieldset, main') || document.body;
-                        containers.add(wrapper);
-                    });
-                    formHtml = Array.from(containers).map(function (c) { return c.outerHTML; }).join('\n');
-                } else {
-                    formHtml = document.body.innerHTML;
-                }
-            }
-
-            var fullPrompt = buildFullContextPrompt(formHtml, userProfile, history);
+            var fullPrompt = buildFullContextPrompt(getFormHtml(), userProfile, history);
             showStatusOverlay('HTML + Profile Extracted!');
             sendResponse({ success: true, prompt: fullPrompt });
         });
         return true;
-    }
-
-    // --- PASTE: inject text into the active LLM input field ---
-    if (request.action === 'PASTE_TO_LLM') {
-        var text = request.text;
-        if (!text) {
-            sendResponse({ success: false, msg: 'No text to paste.' });
-            return;
-        }
-
-        var el = document.activeElement;
-        if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT' && !el.isContentEditable)) {
-            el = document.querySelector('#prompt-textarea')
-                || document.querySelector('.ql-editor')
-                || document.querySelector('div[contenteditable="true"]')
-                || document.querySelector('[contenteditable="true"]')
-                || document.querySelector('textarea')
-                || document.querySelector('[role="textbox"]');
-        }
-
-        if (el) {
-            el.focus();
-            if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
-                el.innerText = '';
-                document.execCommand('insertText', false, text);
-            } else {
-                var nativeSetter = null;
-                try {
-                    nativeSetter = Object.getOwnPropertyDescriptor(
-                        window.HTMLTextAreaElement.prototype, 'value'
-                    ).set || Object.getOwnPropertyDescriptor(
-                        window.HTMLInputElement.prototype, 'value'
-                    ).set;
-                } catch (e) { /* fallback below */ }
-
-                if (nativeSetter) {
-                    nativeSetter.call(el, text);
-                } else {
-                    el.value = text;
-                }
-            }
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-            showStatusOverlay('Prompt Pasted!');
-            sendResponse({ success: true, msg: 'Prompt Pasted!' });
-        } else {
-            sendResponse({ success: false, msg: 'No input field found. Click inside the LLM chat box first.' });
-        }
-        return;
     }
 
     // --- DYNAMIC FILL (with dropdown support + priority matching) ---
