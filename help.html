@@ -39,8 +39,8 @@
             Click <strong>"Extract Form HTML"</strong>. The extension scrapes all form elements, merges them with your saved profile and any historical data from the Local Warehouse, and produces a complete LLM prompt. This prompt appears in the textarea <em>and</em> is copied to your clipboard.
         </li>
         <li>
-            <strong>2 &rarr; Paste to AI</strong><br>
-            Open an LLM interface. Click <strong>"Paste to LLM"</strong>. The extension reads directly from its textarea and injects the prompt into the AI chat input. No clipboard dependency at this step.
+            <strong>2 &rarr; Extract &amp; Copy Form</strong><br>
+            On the form page, click <strong>"Extract &amp; Copy Form"</strong> to copy a form-only prompt with instructions for a matching JSON object. This does not include your saved profile or data table. Paste the prompt into an LLM yourself. You can use this instead of Step 1 when you only need the form structure.
         </li>
         <li>
             <strong>3 &rarr; Paste AI JSON &amp; Execute</strong><br>
@@ -80,14 +80,7 @@
     <h2>Troubleshooting</h2>
 
     <h3>Clipboard Permission Errors</h3>
-    <p>If extraction fails to copy to clipboard:</p>
-    <ol>
-        <li>Click the <strong>Lock Icon</strong> in the URL bar.</li>
-        <li>Select <strong>Site Settings</strong>.</li>
-        <li>Set <strong>Clipboard</strong> to <strong>Allow</strong>.</li>
-        <li>Reload the page and retry.</li>
-    </ol>
-    <p><em>Note:</em> Even if clipboard copy fails, the prompt still loads into the textarea. Copy it manually.</p>
+    <p>If clipboard copy fails, the prompt remains in the popup textarea. Use its Copy button or select the text and copy it manually.</p>
 
     <h3>Connection Errors</h3>
     <p>If you see <strong>"Receiving end does not exist"</strong> or <strong>"Reload the target page to reconnect"</strong>:</p>
@@ -99,6 +92,7 @@
 
     <h3>URL Support Limitation</h3>
     <p>The extension cannot inject into <code>chrome://</code> or <code>edge://</code> pages. Navigate to an <code>http://</code> or <code>https://</code> target.</p>
+    <p>To install in Microsoft Edge, open <code>edge://extensions/</code>, enable Developer mode, and load the extension folder as unpacked.</p>
 
     <h2>Best Practices</h2>
     <div class="feature">
