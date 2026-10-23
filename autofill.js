@@ -72,12 +72,16 @@
             /(?:^|[^a-z])(?:terms|agreements?|consent|agree|accept)(?:$|[^a-z])/i.test(identity)) {
             return 'Agreement and consent decisions must be completed manually.';
         }
+        if (/declar|certify|certification|attest|originality|original work|copyright|vakuut|tekij[a\u00e4]noike/i.test(identity)) {
+            return 'Academic/legal declarations must be completed manually.';
+        }
         if (field.matches('button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], input[type="image"]')) {
             return 'Actions and submission controls are never activated.';
         }
         if (field.type === 'file') return 'Choose the file manually.';
         if (field.matches(':disabled') || field.getAttribute('aria-disabled') === 'true') return 'Control is disabled.';
-        if (!item.host && field.readOnly) return 'Control is read-only.';
+        if ((!item.host || item.date) && field.readOnly) return 'Control is read-only.';
+        if (field.type === 'password' || /(?:password|one-time-code|cc-)/i.test(field.autocomplete)) return 'Sensitive credential/payment fields must be completed manually.';
         if (field.type === 'hidden' || !visible(field)) return 'Control is hidden.';
         if (field.matches('[role="combobox"]') && !item.host) return 'Unsupported custom control; select manually.';
         if (field.tagName === 'SELECT' && field.multiple) return 'Multiple selection requires manual review.';
@@ -93,6 +97,12 @@
         field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
         field.blur();
+    }
+
+    function acceptable(item) {
+        return item.parts.every(part => part.isConnected && visible(part) &&
+            !part.matches(':invalid, .ng-invalid, .ng-pending, [aria-invalid="true"]')) &&
+            (!item.host || !item.host.matches('.ng-invalid, .ng-pending, [aria-invalid="true"]'));
     }
 
     function parseDate(value, full) {
@@ -128,7 +138,7 @@
         const deadline = Date.now() + 1500;
         do {
             const listId = input.getAttribute('aria-controls');
-            const list = (listId && document.getElementById(listId)) || item.host;
+            const list = Array.from(item.host.querySelectorAll('[role="listbox"]')).find(node => node.id === listId) || item.host;
             options = Array.from(list.querySelectorAll('[role="option"], button.dropdown-item')).filter(visible);
             if (options.some(option => normalize(option.textContent) === normalize(value) ||
                 normalize(option.getAttribute('value') || option.getAttribute('data-value')) === normalize(value))) break;
@@ -161,7 +171,7 @@
             for (let i = 0; i < item.parts.length; i++) {
                 const part = item.parts[i];
                 if (!values[i]) continue;
-                if (part.matches(':disabled')) throw new Error('Date component did not enable the next input.');
+                if (part.matches(':disabled') || part.readOnly) throw new Error('Date component did not enable an editable next input.');
                 nativeSet(part, values[i]);
                 await pause(25);
             }
@@ -175,7 +185,9 @@
                 if (matches.length !== 1) throw new Error('Exact unique radio option not found.');
                 const selected = matches[0];
                 if (selected.matches(':disabled')) throw new Error('Radio option is disabled.');
+                selected.focus();
                 selected.click();
+                selected.blur();
                 return () => selected.isConnected && selected.checked && options.every(option => option === selected || !option.checked);
             }
             if (typeof value === 'boolean') expected = value;
@@ -199,7 +211,7 @@
             return { success: false, msg: 'Mapping must be a flat JSON object.' };
         }
         const report = { filled: [], failed: [], skipped: [], manual: [] };
-        const fields = collectFields();
+        let fields = collectFields();
         const plans = Object.entries(mapping).map(([key, value]) => {
             const exact = fields.filter(item => item.ids.includes(key));
             const candidates = exact.length ? exact : fields.filter(item => item.labels.some(label => labelText(label) === labelText(key)));
@@ -208,7 +220,17 @@
         const used = new Set();
         const verified = [];
         for (const plan of plans.sort((a, b) => Number(b.exact) - Number(a.exact))) {
-            const { key, value, candidates } = plan;
+            const { key, value } = plan;
+            if (value == null || (typeof value === 'string' &&
+                /^(?:\s*|unknown|undefined|null|n\/a|not provided)$/i.test(value.trim()))) {
+                report.skipped.push({ key, reason: 'Empty or unknown value; existing contents preserved.' });
+                continue;
+            }
+            // Reactive form arrays can replace/add controls after an earlier assignment.
+            fields = collectFields();
+            const exact = fields.filter(item => item.ids.includes(key));
+            const candidates = exact.length ? exact : fields.filter(item =>
+                item.labels.some(label => labelText(label) === labelText(key)));
             const item = candidates[0];
             const radioGroup = item && item.field.type === 'radio' && item.field.name && candidates.every(candidate =>
                 candidate.field.type === 'radio' && candidate.field.name === item.field.name && candidate.field.form === item.field.form);
@@ -220,16 +242,20 @@
                 report.skipped.push({ key, reason: 'Field already mapped by another key.' });
                 continue;
             }
-            const reason = manualReason(item, key);
+            const reason = candidates.map(candidate => manualReason(candidate, key)).find(Boolean);
             if (reason) {
                 report.manual.push({ key, reason });
                 continue;
             }
             candidates.forEach(candidate => candidate.parts.forEach(part => used.add(part)));
             try {
-                const check = await update(item, value, candidates);
+                const state = part => part.matches('input[type="checkbox"], input[type="radio"]') ? part.checked : part.value;
+                const initial = new Map(candidates.flatMap(candidate => candidate.parts).map(part => [part, state(part)]));
+                const valueCheck = await update(item, value, candidates);
+                const check = () => valueCheck() && acceptable(item) &&
+                    Array.from(initial).every(([part, before]) => !part.classList.contains('ng-pristine') || state(part) === before);
                 await pause(75);
-                if (!check()) throw new Error('Value did not persist after the control update.');
+                if (!check()) throw new Error('Value did not persist, is not visible, validation is invalid/pending, or Angular has not committed the update.');
                 verified.push({ key, check });
             } catch (error) {
                 report.failed.push({ key, reason: error.message });

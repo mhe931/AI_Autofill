@@ -5,7 +5,6 @@
   "description": "Form extraction and filling for Chrome and Microsoft Edge.",
   "permissions": [
     "activeTab",
-    "tabs",
     "scripting",
     "storage",
     "clipboardRead",

@@ -14,7 +14,7 @@ Developed by **[Daniel Ebrahimzadeh](https://github.com/mhe931)**.
 ## Features
 
 - **Dynamic User Profile**: Configure your own identity, skills, and context — no hardcoded data. Any user can set up the extension for their own form-filling needs.
-- **Context-Aware Extraction**: Builds structured LLM prompts by merging user profile + captured history + scraped form HTML.
+- **Context-Aware Extraction**: Builds structured LLM prompts from the profile, optional captured history and a live-value form snapshot. Password/hidden fields and executable markup are excluded.
 - **Textarea-Centric Data Flow**: The popup textarea is the central hub — Extract writes to it, Paste reads from it, Injection parses from it. Content persists across popup sessions via `chrome.storage.local`.
 - **LLM Paste Engine**: Injects prompts using `execCommand('insertText')` and native property setters for compatibility with React/Angular/Vue-controlled inputs.
 - **Verified JSON Injection**: Auto-strips markdown code fences and validates a flat JSON object. Exact IDs/names take precedence over exact unique labels, ARIA labels, or placeholders. Ambiguous and partial matches are not filled.
@@ -58,8 +58,8 @@ an exact unique option. Missing/unloaded options, unsupported custom widgets, di
 controls, file uploads and ambiguous/repeatable fields need manual review. It does not guess a
 partial option or silently write to a custom dropdown's read-only display.
 
-**Safety:** submission/action buttons are never activated. URN fields/generation and license
-acceptance are always left for the user, even if requested in the JSON. Always review the form
+**Safety:** submission/action buttons are never activated. URN fields/generation, license
+acceptance and academic/legal declarations are always left for the user, even if requested in the JSON. Always review the form
 yourself before proceeding. No submission is performed by the extension.
 
 Results describe **each supplied JSON entry**, not every unmapped field on the page:
@@ -67,6 +67,23 @@ Results describe **each supplied JSON entry**, not every unmapped field on the p
 an invalid value, missing option or failed readback; `skipped` means no unique match or a conflicting
 key; `manual` means a protected or unsupported control. Partial runs return `success: false`
 while retaining their verified fills. Reports persist locally without submitted values.
+Empty strings, nulls and explicit unknown markers (`unknown`, `undefined`, `null`, `n/a`,
+`not provided`) are skipped, never used to clear correct existing values. Clear a field manually
+when needed. Boolean `false` and numeric `0` remain valid values.
+
+Controls must remain visible and pass native validation and any exposed Angular validity/pending
+state. A changed Angular control that remains pristine is not counted as committed. Radio
+selection includes focus and blur so `updateOn: 'blur'` reactive forms update their model.
+Submission-deferred controls require manual completion; the extension never submits to commit them.
+Repeated fields need distinct exact IDs; duplicate IDs/names or labels are skipped rather than
+guessed. Controls are rediscovered after each update to handle newly rendered form-array fields.
+Dropdown options are scoped to their own component, even if listbox IDs are duplicated.
+
+Captured history excludes password, hidden, payment and one-time-code inputs, and unchecked
+choices. Warehouse imports require valid records and the viewer treats stored values as text.
+Local storage is not encrypted; retain only information you intend to reuse. All-page content
+script access remains for the extension's general-purpose workflow; the redundant `tabs`
+permission has been removed.
 
 ### Regression checks
 
@@ -75,6 +92,8 @@ With Node.js 22.13+ (or 24+) and npm:
 ```sh
 npm ci
 npm test
+npx playwright install chromium
+npm run test:browser
 ```
 
 The tests use `tests/fixtures/osuva.html`, a synthetic representative submission form based on
@@ -84,12 +103,22 @@ and [number picker](https://github.com/DSpace/dspace-angular/blob/main/src/app/s
 templates. They check real DOM values and event-driven state, asynchronous/rejected updates,
 exact matching, dates, options, reports and protected actions. No private submission data is used.
 
-The same representative fixture was also exercised in Chromium: six actual field values were
-read back, five protected/manual entries remained untouched, and no submit, URN-generation or
-license clicks occurred. This is **not** an authenticated live-Osuva test or proof of server-side
-acceptance. The fixture models Angular's public DOM event contract; it does not boot Angular.
-The deployed Osuva template version has not been confirmed. Verification observes DOM values
-after settling, not private Angular internals or subsequent server responses.
+The separate browser suite boots **real Angular 20 reactive forms**, bundled locally using pinned
+development dependencies. Playwright compares the actual `FormGroup` values with visible controls,
+checks dirty/touched state and validation, and exercises asynchronous representative language,
+degree and faculty dropdowns, repeatable authors, abstracts, dates, repeated fills and protected
+actions. It also verifies that an `updateOn: 'submit'` value is not reported as committed.
+The test server is loopback-only and is stopped by Playwright. `CHROMIUM_PATH` can select an
+already installed Chromium/Edge executable instead of downloading a test browser.
+
+**Verification boundary:** the Angular fixture models DSpace's public custom-control contract;
+it does not run the complete DSpace application. Neither fixture suite proves authenticated
+live-Osuva compatibility or server-side acceptance. During the post-merge audit, the public
+`https://osuva.uwasa.fi/submit` endpoint presented sign-in; no authenticated submission session
+was available. No login, real academic data entry, submission, URN generation or license
+acceptance was performed. The deployed Osuva version and unloaded/paginated vocabulary options
+remain unverified. Outside tests, verification uses DOM readback and exposed framework state,
+not private Angular internals or subsequent server responses.
 
 ## Author
 
