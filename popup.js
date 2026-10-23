@@ -94,7 +94,7 @@ function safeSendMessage(tabId, message, callback) {
             if (errMsg.includes('Receiving end does not exist') || errMsg.includes('Could not establish connection')) {
                 chrome.scripting.executeScript({
                     target: { tabId: tabId },
-                    files: ['content.js']
+                    files: ['autofill.js', 'content.js']
                 }, function() {
                     if (chrome.runtime.lastError) {
                         callback(null, 'Reload the target page to reconnect the extension.');
@@ -123,6 +123,9 @@ function safeSendMessage(tabId, message, callback) {
 document.addEventListener('DOMContentLoaded', function() {
     loadTextareaContent();
     loadProfile();
+    chrome.storage.local.get(['lastFillReport'], function(result) {
+        if (result.lastFillReport) showFillReport(result.lastFillReport);
+    });
     checkClipboardPermission();
 
     // Auto-save textarea on every keystroke
@@ -329,11 +332,35 @@ document.getElementById('injectBtn').addEventListener('click', function() {
                     setStatus(error);
                 } else if (response) {
                     setStatus(response.msg);
+                    if (response.report) {
+                        showFillReport(response.report);
+                        chrome.storage.local.set({ lastFillReport: response.report });
+                    }
                 }
             });
         });
     });
 });
+
+function showFillReport(report) {
+    var box = document.getElementById('fill-report');
+    box.replaceChildren();
+    var title = document.createElement('p');
+    title.textContent = 'Last injection report (may be from a previous page):';
+    box.appendChild(title);
+    ['filled', 'failed', 'skipped', 'manual'].forEach(function(category) {
+        var heading = document.createElement('strong');
+        heading.textContent = (category === 'manual' ? 'Manually required' : category) + ': ' + report[category].length;
+        box.appendChild(heading);
+        report[category].forEach(function(item) {
+            var row = document.createElement('div');
+            row.textContent = item.key + ': ' + item.reason;
+            box.appendChild(row);
+        });
+        box.appendChild(document.createElement('hr'));
+    });
+    box.hidden = false;
+}
 
 // ========================================================
 // DATA MANAGEMENT

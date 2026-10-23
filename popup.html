@@ -17,6 +17,8 @@
         .ctrl-btn:hover { color: #f2c100; border-color: #f2c100; }
         #jsonInput { width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; font-size: 10px; background: #1e1e1e; color: #ffffff; border: 1px solid #333; border-radius: 4px; padding: 6px; resize: vertical; }
         #msg-container { display: none; margin: 8px 0; padding: 8px 10px; border-radius: 4px; background: #2a2a2a; border: 1px solid #f2c100; color: #f2c100; font-size: 11px; max-height: 80px; overflow-y: auto; text-align: left; line-height: 1.4; }
+        #fill-report { margin: 8px 0; padding: 8px; border: 1px solid #555; font-size: 11px; max-height: 240px; overflow-y: auto; text-align: left; overflow-wrap: anywhere; }
+        #fill-report hr { margin: 5px 0; border: 0; border-top: 1px solid #333; }
         .section { border-top: 1px solid #333; padding-top: 8px; margin-top: 8px; }
         .section h4 { color: #f2c100; margin-bottom: 5px; font-size: 12px; }
         .data-btn { background: #1e1e1e; color: #ffffff; border: 1px solid #333; padding: 5px; width: 100%; cursor: pointer; border-radius: 4px; margin-bottom: 3px; font-size: 11px; }
@@ -51,6 +53,7 @@
     <button id="injectBtn" class="primary-btn">3 &rarr; Execute Injection</button>
 
     <div id="msg-container"></div>
+    <div id="fill-report" role="status" aria-live="polite" hidden></div>
 
     <!-- User Profile Section -->
     <div class="section">

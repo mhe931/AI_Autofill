@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><body>
+<!-- Representative DSpace Angular structure, not a capture of a private submission. -->
+<form>
+  <label for="dc.title">Title</label><input id="dc.title" name="dc.title" class="ng-untouched ng-pristine">
+  <label for="dc.title.alternative">Alternative title</label><input id="dc.title.alternative">
+  <label for="dc.description.abstract">Abstract</label><textarea id="dc.description.abstract"></textarea>
+  <label for="dc.language.iso">Language</label>
+  <ds-dynamic-scrollable-dropdown>
+    <div class="w-100">
+      <div role="combobox" aria-expanded="false">
+        <input id="dc.language.iso" name="language" readonly aria-controls="language-list" value="">
+      </div>
+      <div class="dropdown-menu" hidden>
+        <div role="listbox" id="language-list">
+          <button type="button" role="option" class="dropdown-item" data-value="fi">Finnish</button>
+          <button type="button" role="option" class="dropdown-item" data-value="en">English</button>
+          <button type="button" role="option" class="dropdown-item" data-value="eng">English (other)</button>
+        </div>
+      </div>
+    </div>
+  </ds-dynamic-scrollable-dropdown>
+  <ds-date-picker>
+    <fieldset><legend id="legend_dc.date.issued">Publication date</legend>
+      <ds-number-picker id="dc.date.issued_year"><label for="dc.date.issued_year">Year</label><input id="dc.date.issued_year" name="year" type="text"></ds-number-picker>
+      <ds-number-picker id="dc.date.issued_month"><label for="dc.date.issued_month">Month</label><input id="dc.date.issued_month" name="month" type="text" disabled></ds-number-picker>
+      <ds-number-picker id="dc.date.issued_day"><label for="dc.date.issued_day">Day</label><input id="dc.date.issued_day" name="day" type="text" disabled></ds-number-picker>
+    </fieldset>
+  </ds-date-picker>
+  <label for="reviewed">Metadata reviewed</label><input id="reviewed" type="checkbox">
+  <label for="embargo">Embargo end</label><input id="embargo" type="date">
+  <label for="dc.identifier.urn">URN</label><input id="dc.identifier.urn">
+  <button id="generate-urn">Generate URN</button>
+  <ds-license><label for="license">I accept the deposit license</label><input id="license" type="checkbox"></ds-license>
+  <label for="upload">Document</label><input id="upload" type="file">
+  <button type="submit" id="submit">Submit</button>
+</form>
+</body></html>

@@ -39,9 +39,10 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     lines.push("### SYSTEM INSTRUCTIONS");
     lines.push("You are a Senior Data Engineer and Career Advisor assisting with form automation.");
     lines.push("Analyze the HTML form below and generate a flat JSON object.");
-    lines.push("Keys = form field identifiers (id, name, label text, or placeholder).");
+    lines.push("Keys = exact form field IDs or names; use an exact unique label only if neither exists.");
     lines.push("Values = the best professional answer derived from the applicant profile below.");
-    lines.push("For fields you cannot determine, provide a reasonable professional default based on the information you have from me.");
+    lines.push("Omit fields you cannot determine. Never invent URNs or accept licenses, agreements, or submit actions.");
+    lines.push("Use exact visible option text for DSpace dropdowns, true/false for checkboxes, and ISO dates (YYYY-MM-DD, or YYYY / YYYY-MM for DSpace date pickers).");
     lines.push("Output ONLY valid JSON. No markdown fences, no code blocks, no explanation.");
     lines.push("");
 
@@ -50,7 +51,7 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
     if (userProfile && userProfile.trim()) {
         lines.push(userProfile.trim());
     } else {
-        lines.push("use the historical context to fill the form as best as possible and make up the rest based on the context provided based on the information you have from me");
+        lines.push("Use historical context when available. Omit unknown values rather than inventing information.");
     }
     lines.push("");
 
@@ -75,11 +76,12 @@ function getFormHtml() {
     if (document.forms.length > 0) {
         return Array.from(document.forms).map(function (form) { return form.outerHTML; }).join('\n');
     }
-    var inputs = document.querySelectorAll('input, textarea, select');
+    var inputs = document.querySelectorAll('input, textarea, select, ds-dynamic-scrollable-dropdown, ds-date-picker');
     if (inputs.length > 0) {
         var containers = new Set();
         inputs.forEach(function (input) {
-            containers.add(input.closest('div, section, fieldset, main') || document.body);
+            containers.add(input.closest('ds-dynamic-scrollable-dropdown, ds-date-picker') ||
+                input.closest('.form-group, div, section, fieldset, main') || document.body);
         });
         return Array.from(containers).map(function (container) { return container.outerHTML; }).join('\n');
     }
@@ -89,9 +91,11 @@ function getFormHtml() {
 function buildFormOnlyPrompt(formHtml) {
     return [
         'Use the form HTML below to generate a flat JSON object with one key per field.',
-        'Use each field\'s id, name, label, or placeholder as its key so the values can be matched to the form.',
+        'Use exact IDs or names as keys, and only fall back to exact unique labels or placeholders.',
         'Supply a suitable value for each field. For select fields, use an option value or visible option text.',
         'For checkboxes, use true or false. For radio fields, use the selected option value.',
+        'For DSpace dropdowns, use exact visible option text. Use ISO dates (YYYY-MM-DD; DSpace date pickers also accept YYYY or YYYY-MM).',
+        'Omit unknown values, URNs, licenses, agreements and action controls. Never generate an identifier or submit the form.',
         'Return only a valid JSON object. No markdown fences or explanation.',
         '',
         '### FORM HTML',
@@ -126,7 +130,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         return true;
     }
 
-    // --- DYNAMIC FILL (with dropdown support + priority matching) ---
+    // --- Verified, asynchronous fill (including DSpace controls) ---
     if (request.action === 'FILL_FORM') {
         var mapData = {};
         try {
@@ -137,177 +141,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             return;
         }
 
-        var inputCount = 0;
-        var dropdownCount = 0;
-        var allFields = document.querySelectorAll('input, textarea, select');
-
-        // Dispatch full event sequence for framework compatibility
-        function dispatchFieldEvents(field) {
-            field.dispatchEvent(new Event('focus', { bubbles: true }));
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-            field.dispatchEvent(new Event('change', { bubbles: true }));
-            field.dispatchEvent(new Event('blur', { bubbles: true }));
-        }
-
-        // Select dropdown option by matching value or display text
-        function setSelectValue(selectEl, targetValue) {
-            var tv = String(targetValue).trim().toLowerCase();
-            var options = selectEl.options;
-            // Pass 1: exact match on option value
-            for (var i = 0; i < options.length; i++) {
-                if (options[i].value.trim().toLowerCase() === tv) {
-                    selectEl.selectedIndex = i;
-                    return true;
-                }
-            }
-            // Pass 2: exact match on option display text
-            for (var i = 0; i < options.length; i++) {
-                if (options[i].text.trim().toLowerCase() === tv) {
-                    selectEl.selectedIndex = i;
-                    return true;
-                }
-            }
-            // Pass 3: partial match on display text (contains)
-            for (var i = 0; i < options.length; i++) {
-                if (options[i].text.trim().toLowerCase().includes(tv) ||
-                    tv.includes(options[i].text.trim().toLowerCase())) {
-                    selectEl.selectedIndex = i;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // Priority-weighted field matching
-        function findMatchingValue(field) {
-            var fieldId = (field.id || "").toLowerCase().trim();
-            var fieldName = (field.name || "").toLowerCase().trim();
-            var labelFor = "";
-            try {
-                if (field.id) {
-                    // Safe attribute selector querying to avoid DOM exceptions with weird IDs
-                    var safeId = field.id.replace(/"/g, '\\"');
-                    var lbl = document.querySelector('label[for="' + safeId + '"]');
-                    labelFor = lbl ? (lbl.innerText || lbl.textContent || "").toLowerCase().trim() : "";
-                }
-            } catch (e) { /* ignore safe query errors */ }
-            
-            var closestLabelNode = field.closest('label');
-            var closestLabel = closestLabelNode ? (closestLabelNode.innerText || closestLabelNode.textContent || "").toLowerCase().trim() : "";
-            var fieldPlaceholder = (field.placeholder || "").toLowerCase().trim();
-            var ariaLabel = (field.getAttribute('aria-label') || "").toLowerCase().trim();
-            
-            var container = field.closest('.question-container, .form-group, .field-wrapper, div');
-            var containerText = container ? (container.innerText || container.textContent || "").toLowerCase().trim() : "";
-
-            var entries = Object.entries(mapData);
-
-            // Priority 1: Exact ID or Name match
-            for (var i = 0; i < entries.length; i++) {
-                var searchKey = entries[i][0].toLowerCase().trim();
-                if (!searchKey) continue;
-                if (fieldId === searchKey || fieldName === searchKey) {
-                    return entries[i][1];
-                }
-            }
-
-            // Priority 2: Exact label-for or aria-label match
-            for (var i = 0; i < entries.length; i++) {
-                var searchKey = entries[i][0].toLowerCase().trim();
-                if (!searchKey) continue;
-                if (labelFor === searchKey || ariaLabel === searchKey) {
-                    return entries[i][1];
-                }
-            }
-
-            // Priority 3: Partial ID or Name contains
-            for (var i = 0; i < entries.length; i++) {
-                var searchKey = entries[i][0].toLowerCase().trim();
-                if (!searchKey) continue;
-                if ((fieldId && fieldId.includes(searchKey)) ||
-                    (fieldName && fieldName.includes(searchKey))) {
-                    return entries[i][1];
-                }
-            }
-
-            // Priority 4: Label text, placeholder, closest label, container text
-            for (var i = 0; i < entries.length; i++) {
-                var searchKey = entries[i][0].toLowerCase().trim();
-                if (!searchKey) continue;
-                if ((labelFor && labelFor.includes(searchKey)) ||
-                    (closestLabel && closestLabel.includes(searchKey)) ||
-                    (fieldPlaceholder && fieldPlaceholder.includes(searchKey)) ||
-                    (ariaLabel && ariaLabel.includes(searchKey)) ||
-                    (containerText && containerText.includes(searchKey))) {
-                    return entries[i][1];
-                }
-            }
-
-            return undefined;
-        }
-
-        allFields.forEach(function (field) {
-            try {
-                if (!field) return;
-
-                // File inputs cannot be programmatically filled with text values.
-                if (field.tagName === 'INPUT' && field.type && field.type.toLowerCase() === 'file') {
-                    return;
-                }
-
-                var matchedValue = findMatchingValue(field);
-                if (matchedValue === undefined || matchedValue === null) return;
-
-                var valueStr = String(matchedValue);
-
-                if (field.tagName === 'SELECT') {
-                    if (setSelectValue(field, valueStr)) {
-                        dispatchFieldEvents(field);
-                        dropdownCount++;
-                    }
-                } else if (field.tagName === 'INPUT' && (field.type === 'checkbox' || field.type === 'radio')) {
-                    var boolVal = valueStr.toLowerCase();
-                    var shouldCheck = (boolVal === 'true' || boolVal === 'yes' || boolVal === '1' || boolVal === 'on');
-                    if (field.type === 'radio') {
-                        shouldCheck = (field.value.toLowerCase() === valueStr.toLowerCase());
-                    }
-                    field.checked = shouldCheck;
-                    dispatchFieldEvents(field);
-                    inputCount++;
-                } else {
-                    // Standard input/textarea
-                    var nativeSetter = null;
-                    try {
-                        if (field.tagName === 'TEXTAREA') {
-                            nativeSetter = Object.getOwnPropertyDescriptor(
-                                window.HTMLTextAreaElement.prototype, 'value'
-                            ).set;
-                        } else {
-                            nativeSetter = Object.getOwnPropertyDescriptor(
-                                window.HTMLInputElement.prototype, 'value'
-                            ).set;
-                        }
-                    } catch (e) { /* fallback */ }
-
-                    if (nativeSetter) {
-                        nativeSetter.call(field, valueStr);
-                    } else {
-                        field.value = valueStr;
-                    }
-                    dispatchFieldEvents(field);
-                    inputCount++;
-                }
-            } catch (fieldError) {
-                // If a specific field violently errors (e.g. security rejection), log but keep looping!
-                console.warn('AI Form Filler: Failed to mapped field', field, fieldError);
-            }
+        window.AIFormFiller.fill(mapData).then(function (result) {
+            showStatusOverlay(result.msg);
+            sendResponse(result);
+        }).catch(function (error) {
+            console.error('AI Form Filler: Fill failed', error);
+            sendResponse({ success: false, msg: 'Fill failed: ' + error.message });
         });
-
-        var totalFilled = inputCount + dropdownCount;
-        var summary = totalFilled + ' fields (' + inputCount + ' inputs, ' + dropdownCount + ' dropdowns)';
-        showStatusOverlay('Form Filled! ' + summary);
-        sendResponse({ success: true, msg: 'Filled ' + summary, inputs: inputCount, dropdowns: dropdownCount });
-        return;
+        return true;
     }
 
     // --- CAPTURE ---
