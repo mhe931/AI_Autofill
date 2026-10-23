@@ -226,7 +226,7 @@ document.getElementById('extractBtn').addEventListener('click', function() {
 
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         var tab = tabs[0];
-        if (!isSupportedUrl(tab.url)) {
+        if (!tab || !isSupportedUrl(tab.url)) {
             setStatus('Navigate to an http/https page first.');
             return;
         }
@@ -322,7 +322,7 @@ document.getElementById('injectBtn').addEventListener('click', function() {
     chrome.storage.local.set({ formMapping: cleanJson }, function() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             var tab = tabs[0];
-            if (!isSupportedUrl(tab.url)) {
+            if (!tab || !isSupportedUrl(tab.url)) {
                 setStatus('Navigate to the target form page first.');
                 return;
             }
@@ -365,10 +365,29 @@ function showFillReport(report) {
 // ========================================================
 // DATA MANAGEMENT
 // ========================================================
+function isWarehouseRecord(record) {
+    return !!record && typeof record === 'object' && !Array.isArray(record) &&
+        ['timestamp', 'label', 'value', 'sourceUrl'].every(function(key) {
+            return typeof record[key] === 'string';
+        });
+}
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[character];
+    });
+}
+
 document.getElementById('captureBtn').addEventListener('click', function() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         var tab = tabs[0];
-        if (!isSupportedUrl(tab.url)) {
+        if (!tab || !isSupportedUrl(tab.url)) {
             setStatus('Cannot capture on internal browser pages.');
             return;
         }
@@ -384,15 +403,16 @@ document.getElementById('captureBtn').addEventListener('click', function() {
 
 document.getElementById('viewBtn').addEventListener('click', function() {
     chrome.storage.local.get(['localWarehouse'], function(result) {
-        var data = result.localWarehouse || [];
+        var data = Array.isArray(result.localWarehouse) ? result.localWarehouse.filter(isWarehouseRecord) : [];
         var html = '<html><head><meta charset="UTF-8"><title>Data Table</title><style>' +
             'body { font-family: sans-serif; background: #121212; color: #ffffff; padding: 20px;}' +
             'table { width: 100%; border-collapse: collapse; }' +
             'th, td { border: 1px solid #333; padding: 8px; text-align: left;}' +
             'th { background-color: #1e1e1e; color: #f2c100;}' +
             '</style></head><body><h2>Local Data Warehouse</h2><table><tr><th>Timestamp</th><th>Label</th><th>Value/Path</th><th>URL</th></tr>';
-        data.reverse().forEach(function(d) {
-            html += '<tr><td>' + d.timestamp + '</td><td>' + d.label + '</td><td>' + d.value + '</td><td>' + d.sourceUrl + '</td></tr>';
+        data.slice().reverse().forEach(function(d) {
+            html += '<tr><td>' + escapeHtml(d.timestamp) + '</td><td>' + escapeHtml(d.label) +
+                '</td><td>' + escapeHtml(d.value) + '</td><td>' + escapeHtml(d.sourceUrl) + '</td></tr>';
         });
         html += '</table></body></html>';
         chrome.tabs.create({ url: 'data:text/html;charset=utf-8,' + encodeURIComponent(html) });
@@ -429,9 +449,10 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     reader.onload = function(evt) {
         try {
             var data = JSON.parse(evt.target.result);
-            if (Array.isArray(data)) {
+            if (Array.isArray(data) && data.every(isWarehouseRecord)) {
                 chrome.storage.local.get(['localWarehouse'], function(result) {
-                    var existing = result.localWarehouse || [];
+                    var existing = Array.isArray(result.localWarehouse) ?
+                        result.localWarehouse.filter(isWarehouseRecord) : [];
                     chrome.storage.local.set({ localWarehouse: existing.concat(data) }, function() {
                         setStatus('Imported ' + data.length + ' records!');
                     });

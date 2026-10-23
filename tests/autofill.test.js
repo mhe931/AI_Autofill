@@ -293,3 +293,132 @@ test('popup displays and persists the real field report using text, not HTML', a
     assert.equal(box.querySelector('img'), null);
     assert.equal(stored.lastFillReport.filled[0].key, 'dc.title');
 });
+
+test('empty and unknown mapping values preserve partially completed academic fields', async t => {
+    const p = page(t, '<input id="title" value="Correct title"><textarea id="abstract">Correct abstract</textarea>' +
+        '<input id="author" value="Correct author"><input id="zero"><input id="flag" type="checkbox" checked>');
+    const result = await p.fill({ title: '  ', abstract: null, author: 'unknown', zero: 0, flag: false });
+    assert.equal(p.document.getElementById('title').value, 'Correct title');
+    assert.equal(p.document.getElementById('abstract').value, 'Correct abstract');
+    assert.equal(p.document.getElementById('author').value, 'Correct author');
+    assert.equal(p.document.getElementById('zero').value, '0');
+    assert.equal(p.document.getElementById('flag').checked, false);
+    assert.equal(result.report.skipped.length, 3);
+    assert.equal(result.report.filled.length, 2);
+});
+
+test('native and Angular validation errors cannot count as successful fills', async t => {
+    const p = page(t, '<input id="email" type="email"><input id="year" type="number" min="2000" max="2100">' +
+        '<input id="angular"><input id="pending">');
+    p.document.getElementById('angular').addEventListener('input', e => e.target.classList.add('ng-invalid'));
+    p.document.getElementById('pending').addEventListener('input', e => e.target.classList.add('ng-pending'));
+    const result = await p.fill({ email: 'not-an-email', year: 3000, angular: 'Rejected', pending: 'Unconfirmed' });
+    assert.equal(result.report.filled.length, 0);
+    assert.equal(result.report.failed.length, 4);
+});
+
+test('each radio candidate is protected and hidden options cannot be selected indirectly', async t => {
+    const p = page(t, '<input type="radio" name="choice" value="safe">' +
+        '<label><input type="radio" name="choice" value="license">Accept license</label>' +
+        '<input type="radio" name="access" value="visible"><input type="radio" name="access" value="hidden" hidden>');
+    const result = await p.fill({ choice: 'license', access: 'hidden' });
+    assert.equal(p.document.querySelector('[value=license]').checked, false);
+    assert.equal(p.document.querySelector('[value=hidden]').checked, false);
+    assert.equal(result.report.manual.length, 2);
+});
+
+test('dynamic form-array fields are resolved again after earlier updates replace or add controls', async t => {
+    const p = page(t, '<input id="trigger"><input id="author_0"><input id="same"><input id="same">' +
+        '<label for="abstract_en">Abstract</label><textarea id="abstract_en"></textarea>' +
+        '<label for="abstract_fi">Abstract</label><textarea id="abstract_fi"></textarea>');
+    p.document.getElementById('trigger').addEventListener('change', () => {
+        p.document.getElementById('author_0').outerHTML = '<input id="author_0"><input id="author_1">';
+    });
+    const result = await p.fill({ trigger: 'Add', author_0: 'First', author_1: 'Second', same: 'No', Abstract: 'No' });
+    assert.equal(p.document.getElementById('author_0').value, 'First');
+    assert.equal(p.document.getElementById('author_1').value, 'Second');
+    assert.equal(p.document.querySelector('[id=same]').value, '');
+    assert.equal(p.document.getElementById('abstract_en').value, '');
+    assert.equal(result.report.filled.length, 3);
+    assert.equal(result.report.skipped.length, 2);
+});
+
+test('readonly DSpace date components remain manual', async t => {
+    const p = page(t);
+    p.document.querySelector('input[id="dc.date.issued_year"]').readOnly = true;
+    const result = await p.fill({ 'dc.date.issued': '2026-10-23' });
+    assert.equal(p.document.querySelector('input[id="dc.date.issued_year"]').value, '');
+    assert.equal(result.report.manual.length, 1);
+});
+
+test('extraction reflects current values without exporting credentials or hidden payloads', async t => {
+    const p = page(t, '<form><label for="title">Title</label><input id="title" value="Old title">' +
+        '<textarea id="abstract">Old abstract</textarea><input id="review" type="checkbox" checked>' +
+        '<select id="degree"><option value="msc">MSc</option><option value="phd">PhD</option></select>' +
+        '<input id="password" type="password" value="never-export-this"><input type="hidden" value="secret-token">' +
+        '<script>const internalToken = "never-export-script";</script></form><input id="outside" value="Outside">');
+    p.document.getElementById('title').value = 'Current title';
+    p.document.getElementById('abstract').value = 'Current abstract';
+    p.document.getElementById('review').checked = false;
+    p.document.getElementById('degree').value = 'phd';
+    const response = await p.message('EXTRACT_FORM_ONLY');
+    const html = response.prompt.split('### FORM HTML\n')[1];
+    const extracted = new JSDOM(html).window.document;
+    assert.equal(extracted.getElementById('title').value, 'Current title');
+    assert.equal(extracted.getElementById('abstract').value, 'Current abstract');
+    assert.equal(extracted.getElementById('review').checked, false);
+    assert.equal(extracted.getElementById('degree').value, 'phd');
+    assert.equal(extracted.getElementById('outside').value, 'Outside');
+    assert.doesNotMatch(response.prompt, /never-export|secret-token/);
+});
+
+test('a repeated dropdown cannot select options from another dropdown with a duplicate listbox ID', async t => {
+    const p = page(t, '<ds-dynamic-scrollable-dropdown><div role="combobox"><input id="first" readonly aria-controls="options" value="English"></div>' +
+        '<div class="dropdown-menu" id="options" role="listbox"><button type="button" role="option">English</button></div></ds-dynamic-scrollable-dropdown>' +
+        '<ds-dynamic-scrollable-dropdown><div role="combobox"><input id="second" readonly aria-controls="options" value="English"></div>' +
+        '<div class="dropdown-menu" id="options" role="listbox"><button type="button" role="option">Finnish</button></div></ds-dynamic-scrollable-dropdown>');
+    // No option handler commits the requested value in the second host.
+    let wrongClicks = 0;
+    p.document.querySelector('button').addEventListener('mousedown', () => { wrongClicks++; });
+    const result = await p.fill({ second: 'English' });
+    assert.equal(wrongClicks, 0);
+    assert.equal(result.report.filled.length, 0);
+    assert.equal(result.report.failed.length, 1);
+});
+
+test('academic originality and legal declarations require manual approval', async t => {
+    const p = page(t, '<label for="original">I certify this thesis is my original work</label><input id="original" type="checkbox">' +
+        '<label for="declaration">Legal declaration</label><select id="declaration"><option value="no">No</option><option value="yes">Yes</option></select>');
+    const result = await p.fill({ original: true, declaration: 'yes' });
+    assert.equal(p.document.getElementById('original').checked, false);
+    assert.equal(p.document.getElementById('declaration').value, 'no');
+    assert.equal(result.report.manual.length, 2);
+});
+
+test('a date part which stays readonly is not written after enabling its dependency', async t => {
+    const p = page(t);
+    const month = p.document.querySelector('input[id="dc.date.issued_month"]');
+    month.readOnly = true;
+    const result = await p.fill({ 'dc.date.issued': '2026-10-23' });
+    assert.equal(month.value, '');
+    assert.equal(result.report.filled.length, 0);
+    assert.equal(result.report.failed.length, 1);
+});
+
+test('visible password-toggle and section-prefixed payment credentials are not extracted', async t => {
+    const p = page(t, '<form><input type="text" autocomplete="section-login current-password" value="credential-sentinel">' +
+        '<input type="text" autocomplete="NEW-PASSWORD" value="new-credential-sentinel">' +
+        '<input autocomplete="section-payment cc-number" value="card-sentinel">' +
+        '<input autocomplete="section-login one-time-code" value="code-sentinel"><input id="title" value="Public thesis"></form>');
+    const response = await p.message('EXTRACT_FORM_ONLY');
+    assert.doesNotMatch(response.prompt, /credential-sentinel|card-sentinel|code-sentinel/);
+    assert.match(response.prompt, /Public thesis/);
+});
+
+test('extraction retains already rendered dropdown choices without opening the form control', async t => {
+    const p = page(t);
+    const response = await p.message('EXTRACT_FORM_ONLY');
+    assert.match(response.prompt, /English \(other\)/);
+    assert.equal(p.document.querySelector('.dropdown-menu').hidden, true);
+    assert.equal(p.state.language, undefined);
+});

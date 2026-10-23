@@ -51,6 +51,7 @@
     <h2>Osuva / DSpace submissions</h2>
     <p>Use the current form's exact identifiers and exact visible dropdown option text. Use <code>true</code> or <code>false</code> for checkboxes and ISO dates: <code>YYYY-MM-DD</code>. DSpace split dates also accept <code>YYYY</code> or <code>YYYY-MM</code>, keyed by the shared field prefix before <code>_year</code>, <code>_month</code> and <code>_day</code>.</p>
     <p>The persistent last-injection report lists each JSON entry as <strong>filled (verified)</strong>, <strong>failed</strong>, <strong>skipped</strong> or <strong>manually required</strong>, with reasons. It may describe a previous page. A partial fill is not an overall success. Unmapped form fields are not counted; review those yourself.</p>
+    <p>Empty/null/unknown values do not clear existing data. Clear fields manually when necessary. Native invalid values and Angular invalid, pending or uncommitted changes are not successes. A value may still be visible in a failed field so you can correct it manually. Repeated fields need unique identifiers. Extract again after changing form steps; extraction includes current values, not stale HTML defaults.</p>
     <p><strong>The extension never submits forms, generates/fills URNs, or accepts licenses.</strong> These actions, file uploads, unsupported controls and protected fields require manual work. A custom option not rendered within 1.5 seconds is reported as a failure, never guessed. Review the completed values yourself before continuing. DOM readback does not prove server-side acceptance.</p>
 
     <h2>User Profile</h2>
@@ -75,7 +76,7 @@
     </div>
 
     <h2>Data Warehouse &amp; Persistence</h2>
-    <p>All data stays local via <code>chrome.storage.local</code>:</p>
+    <p>All data stays local via <code>chrome.storage.local</code>, which is not encrypted. Do not retain credentials or other secrets. Extraction/capture exclude password and hidden inputs, and capture also excludes payment/one-time-code fields and unchecked choices:</p>
     <ul>
         <li><strong>Capture Current Form Data:</strong> Scrapes all filled fields into timestamped records for future prompt augmentation.</li>
         <li><strong>View Data Table:</strong> Opens a formatted HTML table of all captured context.</li>

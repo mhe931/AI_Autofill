@@ -73,19 +73,52 @@ function buildFullContextPrompt(formHtml, userProfile, history) {
 }
 
 function getFormHtml() {
-    if (document.forms.length > 0) {
-        return Array.from(document.forms).map(function (form) { return form.outerHTML; }).join('\n');
-    }
-    var inputs = document.querySelectorAll('input, textarea, select, ds-dynamic-scrollable-dropdown, ds-date-picker');
-    if (inputs.length > 0) {
-        var containers = new Set();
-        inputs.forEach(function (input) {
-            containers.add(input.closest('ds-dynamic-scrollable-dropdown, ds-date-picker') ||
-                input.closest('.form-group, div, section, fieldset, main') || document.body);
+    var containers = new Set(Array.from(document.forms));
+    document.querySelectorAll('input, textarea, select, ds-dynamic-scrollable-dropdown, ds-date-picker').forEach(function (field) {
+        if (field.closest('form')) return;
+        containers.add(field.closest('ds-dynamic-scrollable-dropdown, ds-date-picker') ||
+            field.closest('.form-group, div, section, fieldset, main') || field.parentElement);
+    });
+    var roots = Array.from(containers).filter(function (root) {
+        return !Array.from(containers).some(function (other) { return other !== root && other.contains(root); });
+    });
+    return roots.map(function (root) {
+        var clone = root.cloneNode(true);
+        var originals = [root].concat(Array.from(root.querySelectorAll('*')));
+        var copies = [clone].concat(Array.from(clone.querySelectorAll('*')));
+        originals.forEach(function (field, index) {
+            var copy = copies[index];
+            Array.from(copy.attributes).forEach(function (attribute) {
+                if (/^on/i.test(attribute.name) || (attribute.name.startsWith('data-') && attribute.name !== 'data-value')) {
+                    copy.removeAttribute(attribute.name);
+                }
+            });
+            if (field.matches('input')) {
+                copy.setAttribute('value', field.value);
+                if (field.checked) copy.setAttribute('checked', '');
+                else copy.removeAttribute('checked');
+            } else if (field.matches('textarea')) {
+                copy.textContent = field.value;
+            } else if (field.matches('option')) {
+                if (field.selected) copy.setAttribute('selected', '');
+                else copy.removeAttribute('selected');
+            }
         });
-        return Array.from(containers).map(function (container) { return container.outerHTML; }).join('\n');
-    }
-    return document.body.innerHTML;
+        clone.querySelectorAll('[autocomplete]').forEach(function (node) {
+            if (/(?:^|\s)(?:current-password|new-password|one-time-code|cc-[^\s]+)(?:\s|$)/i.test(node.getAttribute('autocomplete'))) {
+                node.remove();
+            }
+        });
+        clone.querySelectorAll('script, style, noscript, iframe, object, embed, input[type="password"], input[type="hidden"]').forEach(function (node) {
+            node.remove();
+        });
+        clone.querySelectorAll('[hidden], [inert], [aria-hidden="true"]').forEach(function (node) {
+            if (node.closest('ds-dynamic-scrollable-dropdown') && node.matches('[role="listbox"], .dropdown-menu')) return;
+            node.remove();
+        });
+        if (clone.matches('input[type="password"], input[type="hidden"], [hidden], [inert], [aria-hidden="true"]')) return '';
+        return clone.outerHTML;
+    }).join('\n');
 }
 
 function buildFormOnlyPrompt(formHtml) {
@@ -145,8 +178,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             showStatusOverlay(result.msg);
             sendResponse(result);
         }).catch(function (error) {
-            console.error('AI Form Filler: Fill failed', error);
-            sendResponse({ success: false, msg: 'Fill failed: ' + error.message });
+            console.error('AI Form Filler: Fill failed. No field values were logged.');
+            sendResponse({ success: false, msg: 'Fill failed unexpectedly. Review the form before trying again.' });
         });
         return true;
     }
@@ -158,7 +191,13 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         var sourceUrl = window.location.href;
 
         document.querySelectorAll('input, textarea, select').forEach(function (field) {
-            if (!field || !field.value.trim()) return;
+            if (!field) return;
+            var type = (field.type || '').toLowerCase();
+            var autocomplete = (field.getAttribute('autocomplete') || '').toLowerCase();
+            if (type === 'password' || type === 'hidden' ||
+                /(?:^|\s)(?:current-password|new-password|one-time-code|cc-[a-z-]+)(?:\s|$)/.test(autocomplete)) return;
+            if ((type === 'checkbox' || type === 'radio') && !field.checked) return;
+            if (typeof field.value !== 'string' || !field.value.trim()) return;
 
             var potentialLabel = "";
             var labelEl = field.closest('label');
@@ -184,7 +223,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         }
 
         chrome.storage.local.get(['localWarehouse'], function (result) {
-            var existing = result.localWarehouse || [];
+            var existing = Array.isArray(result.localWarehouse) ? result.localWarehouse : [];
             existing = existing.concat(records);
             chrome.storage.local.set({ localWarehouse: existing }, function () {
                 showStatusOverlay('Captured ' + records.length + ' fields!');
