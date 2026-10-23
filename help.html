@@ -44,9 +44,14 @@
         </li>
         <li>
             <strong>3 &rarr; Paste AI JSON &amp; Execute</strong><br>
-            Copy the LLM JSON response. Paste it into the extension textarea (replacing the prompt). Click <strong>"Execute Injection"</strong>. The extension strips any <code>```json</code> markdown fences, validates JSON, then fills the form using priority-weighted matching (exact id &gt; exact name &gt; label/aria-label &gt; partial matches &gt; placeholder/container text). <strong>Dropdown menus</strong> (<code>&lt;select&gt;</code>) are supported: the extension matches option values or display text automatically. Checkboxes and radio buttons are also handled.
+            Copy the LLM JSON response. Paste it into the extension textarea (replacing the prompt). Click <strong>"Execute Injection"</strong>. The extension strips <code>```json</code> fences and requires a flat JSON object. Exact IDs/names take precedence over exact unique labels, ARIA labels or placeholders. Partial and ambiguous matches are skipped. Native selects and DSpace scrollable dropdowns select exact real options; checkboxes and radio buttons use real clicks. A field counts as filled only after its value is read back.
         </li>
     </ol>
+
+    <h2>Osuva / DSpace submissions</h2>
+    <p>Use the current form's exact identifiers and exact visible dropdown option text. Use <code>true</code> or <code>false</code> for checkboxes and ISO dates: <code>YYYY-MM-DD</code>. DSpace split dates also accept <code>YYYY</code> or <code>YYYY-MM</code>, keyed by the shared field prefix before <code>_year</code>, <code>_month</code> and <code>_day</code>.</p>
+    <p>The persistent last-injection report lists each JSON entry as <strong>filled (verified)</strong>, <strong>failed</strong>, <strong>skipped</strong> or <strong>manually required</strong>, with reasons. It may describe a previous page. A partial fill is not an overall success. Unmapped form fields are not counted; review those yourself.</p>
+    <p><strong>The extension never submits forms, generates/fills URNs, or accepts licenses.</strong> These actions, file uploads, unsupported controls and protected fields require manual work. A custom option not rendered within 1.5 seconds is reported as a failure, never guessed. Review the completed values yourself before continuing. DOM readback does not prove server-side acceptance.</p>
 
     <h2>User Profile</h2>
     <div class="feature">
